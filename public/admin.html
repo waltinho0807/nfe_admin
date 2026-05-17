@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin — NF-e License</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-h: #1e3a8a;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --bg: #f4f4f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--gray-900);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    /* ── Login ──────────────────────────────────────────────────────── */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 400px;
+    }
+    .login-card h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: var(--primary);
+    }
+    .login-card .subtitle {
+      margin: 0 0 28px;
+      color: var(--gray-500);
+      font-size: 13px;
+    }
+    /* ── Layout principal ───────────────────────────────────────────── */
+    .app { display: none; }
+    .app.active { display: block; }
+    header {
+      background: white;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--primary);
+    }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .admin-email {
+      color: var(--gray-500);
+      font-size: 12px;
+      margin-right: 12px;
+    }
+    main {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* ── Stats cards ────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid var(--gray-200);
+    }
+    .stat-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+    .stat-card.success .value { color: var(--success); }
+    .stat-card.warning .value { color: var(--warning); }
+    .stat-card.danger  .value { color: var(--danger); }
+    /* ── Card geral ─────────────────────────────────────────────────── */
+    .card {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--gray-200);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .card-header h2 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--gray-700);
+    }
+    .card-body { padding: 0; }
+    /* ── Filtros ────────────────────────────────────────────────────── */
+    .filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    /* ── Form fields ────────────────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 4px;
+    }
+    .field { margin-bottom: 16px; }
+    input[type="text"], input[type="email"], input[type="password"], select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--gray-300);
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      transition: border-color 0.1s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30,64,175,0.1);
+    }
+    .filters input, .filters select { width: auto; }
+    /* ── Botões ─────────────────────────────────────────────────────── */
+    button {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.1s, background 0.1s;
+      font-family: inherit;
+    }
+    button:hover { opacity: 0.92; }
+    button:active { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-h); opacity: 1; }
+    .btn-secondary { background: white; color: var(--gray-700); border: 1px solid var(--gray-300); }
+    .btn-secondary:hover { background: var(--gray-50); opacity: 1; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-full { width: 100%; }
+    /* ── Tabela ─────────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--gray-50);
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: var(--gray-50); }
+    code.chave {
+      background: var(--gray-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+    }
+    /* ── Badge ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); }
+    .badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+    .badge-default { background: var(--gray-100);   color: var(--gray-500); }
+    /* ── Estado vazio / loading / erro ──────────────────────────────── */
+    .empty, .loading, .error-msg {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--gray-500);
+    }
+    .error-msg { color: var(--danger); }
+    /* ── Modal ──────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 {
+      margin: 0 0 16px;
+      font-size: 18px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 24px;
+    }
+    /* ── Notificação (toast) ────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 14px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      color: white;
+      font-weight: 600;
+      z-index: 2000;
+      animation: slideIn 0.2s ease-out;
+      max-width: 400px;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error   { background: var(--danger); }
+    .toast.info    { background: var(--primary); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    /* ── Chave destacada (após criar) ───────────────────────────────── */
+    .chave-destaque {
+      background: #f0f9ff;
+      border: 2px solid #0ea5e9;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      margin: 16px 0;
+    }
+    .chave-destaque .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .chave-destaque .valor {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: 'SF Mono', Menlo, Consolas, monospace;
+      color: #0c4a6e;
+      letter-spacing: 3px;
+      cursor: pointer;
+    }
+    .chave-destaque .copy-hint {
+      font-size: 11px;
+      color: var(--gray-500);
+      margin-top: 6px;
+    }
+    /* ── Paginação ──────────────────────────────────────────────────── */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      border-top: 1px solid var(--gray-200);
+      background: var(--gray-50);
+    }
+    .pagination-info {
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .pagination-controls { display: flex; gap: 6px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ TELA DE LOGIN ════════════ -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <h1>NF-e License</h1>
+    <p class="subtitle">Painel administrativo</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Senha</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary btn-full" id="login-btn">Entrar</button>
+      <p id="login-error" style="color:var(--danger);font-size:13px;margin-top:12px;text-align:center;display:none;"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════ APP PRINCIPAL ════════════ -->
+<div id="app" class="app">
+  <header>
+    <h1>NF-e License — Admin</h1>
+    <div class="header-actions">
+      <span class="admin-email" id="admin-email-display"></span>
+      <button class="btn-secondary btn-sm" onclick="recarregar()">↻ Recarregar</button>
+      <button class="btn-secondary btn-sm" onclick="logout()">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ── Stats ── -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card success">
+        <div class="label">Ativas</div>
+        <div class="value" id="stat-ativas">—</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="label">Inativas</div>
+        <div class="value" id="stat-inativas">—</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="label">Revogadas</div>
+        <div class="value" id="stat-revogadas">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Novas 7 dias</div>
+        <div class="value" id="stat-novas7">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Novas 30 dias</div>
+        <div class="value" id="stat-novas30">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Ativações hoje</div>
+        <div class="value" id="stat-hoje">—</div>
+      </div>
+    </div>
+
+    <!-- ── Lista de licenças ── -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Licenças</h2>
+        <div class="filters">
+          <input type="text" id="filter-q" placeholder="Buscar nome/email/chave" style="width:240px;">
+          <select id="filter-status">
+            <option value="">Todos os status</option>
+            <option value="ativa">Ativa</option>
+            <option value="inativa">Inativa</option>
+            <option value="revogada">Revogada</option>
+            <option value="suspensa">Suspensa</option>
+          </select>
+          <button class="btn-secondary btn-sm" onclick="carregarLicencas()">Filtrar</button>
+          <button class="btn-primary btn-sm" onclick="abrirModalCriar()">+ Criar chave</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="licencas-container">
+          <div class="loading">Carregando licenças...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ════════════ MODAL CRIAR CHAVE ════════════ -->
+<div class="modal-overlay" id="modal-criar">
+  <div class="modal">
+    <h3 id="modal-criar-titulo">Criar chave</h3>
+    <p style="color:var(--gray-500);font-size:13px;margin-top:0;">
+      Use <strong>Chave de teste</strong> para QA (sem email). Use <strong>Chave manual</strong>
+      pra clientes que compraram fora do Hotmart (envia email com a chave).
+    </p>
+
+    <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <button class="btn-secondary btn-sm" id="tab-teste" onclick="trocarTipoCriar('teste')">Chave de teste</button>
+      <button class="btn-secondary btn-sm" id="tab-manual" onclick="trocarTipoCriar('manual')">Chave manual (com email)</button>
+    </div>
+
+    <form id="criar-form">
+      <div class="field">
+        <label>Email do cliente</label>
+        <input type="email" id="criar-email" required>
+      </div>
+      <div class="field">
+        <label>Nome do cliente</label>
+        <input type="text" id="criar-nome" required>
+      </div>
+      <div class="field" id="criar-motivo-wrap" style="display:none;">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="criar-motivo" placeholder="Ex: Compra externa via Pix">
+      </div>
+
+      <!-- Resultado: chave gerada -->
+      <div id="criar-resultado" style="display:none;">
+        <div class="chave-destaque">
+          <div class="label">Chave gerada</div>
+          <div class="valor" id="criar-chave-valor" title="Clique pra copiar">—</div>
+          <div class="copy-hint">Clique na chave pra copiar</div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="fecharModal('modal-criar')">Fechar</button>
+        <button type="submit" class="btn-primary" id="criar-submit">Gerar chave</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  Estado global
+// ════════════════════════════════════════════════════════════════════
+const API_BASE = ''  // mesma origem (URL relativa)
+let token = sessionStorage.getItem('admin_token') || ''
+let adminEmail = sessionStorage.getItem('admin_email') || ''
+let paginaAtual = 1
+let tipoCriar = 'teste'  // 'teste' ou 'manual'
+
+// ════════════════════════════════════════════════════════════════════
+//  Helpers
+// ════════════════════════════════════════════════════════════════════
+function api(path, opts = {}) {
+  // Wrapper de fetch com token + tratamento de erros
+  const headers = {
+    'Content-Type': 'application/json',
+    ...opts.headers,
+  }
+  if (token) headers['Authorization'] = 'Bearer ' + token
+  return fetch(API_BASE + path, {
+    ...opts,
+    headers,
+  }).then(async r => {
+    const ct = r.headers.get('content-type') || ''
+    const data = ct.includes('json') ? await r.json() : await r.text()
+    if (r.status === 401) {
+      // Token expirou
+      sessionStorage.clear()
+      mostrarLogin()
+      throw new Error('Sessão expirada — faça login novamente')
+    }
+    if (!r.ok) throw new Error(data.error || data.message || ('HTTP ' + r.status))
+    return data
+  })
+}
+
+function toast(msg, tipo = 'info') {
+  const el = document.createElement('div')
+  el.className = 'toast ' + tipo
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 3500)
+}
+
+function fmtData(s) {
+  if (!s) return '—'
+  try {
+    return new Date(s).toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+  } catch { return s }
+}
+
+function statusBadge(s) {
+  const cls = {
+    ativa: 'badge-success',
+    inativa: 'badge-warning',
+    revogada: 'badge-danger',
+    suspensa: 'badge-danger',
+  }[s] || 'badge-default'
+  return `<span class="badge ${cls}">${s}</span>`
+}
+
+function escapeHtml(s) {
+  if (s == null) return ''
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Login / Logout
+// ════════════════════════════════════════════════════════════════════
+function mostrarLogin() {
+  document.getElementById('login-screen').style.display = 'flex'
+  document.getElementById('app').classList.remove('active')
+}
+
+function mostrarApp() {
+  document.getElementById('login-screen').style.display = 'none'
+  document.getElementById('app').classList.add('active')
+  document.getElementById('admin-email-display').textContent = adminEmail
+  carregarStats()
+  carregarLicencas()
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const email = document.getElementById('login-email').value
+  const password = document.getElementById('login-password').value
+  const btn = document.getElementById('login-btn')
+  const errEl = document.getElementById('login-error')
+
+  btn.disabled = true
+  btn.textContent = 'Entrando...'
+  errEl.style.display = 'none'
+
+  try {
+    const data = await fetch(API_BASE + '/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }).then(async r => {
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || 'Falha no login')
+      return j
+    })
+    token = data.token
+    adminEmail = email
+    sessionStorage.setItem('admin_token', token)
+    sessionStorage.setItem('admin_email', adminEmail)
+    mostrarApp()
+  } catch (err) {
+    errEl.textContent = err.message
+    errEl.style.display = 'block'
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Entrar'
+  }
+})
+
+function logout() {
+  if (!confirm('Sair do painel admin?')) return
+  sessionStorage.clear()
+  token = ''
+  adminEmail = ''
+  mostrarLogin()
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Stats
+// ════════════════════════════════════════════════════════════════════
+async function carregarStats() {
+  try {
+    const stats = await api('/api/admin/stats')
+    document.getElementById('stat-total').textContent     = stats.total ?? 0
+    document.getElementById('stat-ativas').textContent    = stats.ativas ?? 0
+    document.getElementById('stat-inativas').textContent  = stats.inativas ?? 0
+    document.getElementById('stat-revogadas').textContent = stats.revogadas ?? 0
+    document.getElementById('stat-novas7').textContent    = stats.novas7 ?? 0
+    document.getElementById('stat-novas30').textContent   = stats.novas30 ?? 0
+    document.getElementById('stat-hoje').textContent      = stats.ativacoesHoje ?? 0
+  } catch (err) {
+    toast('Erro ao carregar stats: ' + err.message, 'error')
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Licenças
+// ════════════════════════════════════════════════════════════════════
+async function carregarLicencas(page = 1) {
+  paginaAtual = page
+  const container = document.getElementById('licencas-container')
+  container.innerHTML = '<div class="loading">Carregando licenças...</div>'
+
+  const q = document.getElementById('filter-q').value.trim()
+  const status = document.getElementById('filter-status').value
+  const params = new URLSearchParams({ page: page, limit: 20 })
+  if (q) params.set('q', q)
+  if (status) params.set('status', status)
+
+  try {
+    const data = await api('/api/admin/licenses?' + params)
+    renderLicencas(data)
+  } catch (err) {
+    container.innerHTML = `<div class="error-msg">Erro: ${escapeHtml(err.message)}</div>`
+  }
+}
+
+function renderLicencas(data) {
+  const container = document.getElementById('licencas-container')
+
+  if (!data.licenses || data.licenses.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <p>Nenhuma licença encontrada.</p>
+        <button class="btn-primary btn-sm" onclick="abrirModalCriar()">+ Criar a primeira chave</button>
+      </div>`
+    return
+  }
+
+  const rows = data.licenses.map(l => {
+    const machine = l.machine_id
+      ? `<code style="font-size:11px;color:var(--gray-500);">${escapeHtml(l.machine_id.slice(0,12))}…</code>`
+      : '<span style="color:var(--gray-500);">—</span>'
+
+    return `
+      <tr>
+        <td><code class="chave">${escapeHtml(l.chave)}</code></td>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(l.nome)}</div>
+          <div style="font-size:12px;color:var(--gray-500);">${escapeHtml(l.email)}</div>
+        </td>
+        <td>${statusBadge(l.status)}</td>
+        <td>${machine}</td>
+        <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_compra)}</td>
+        <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_ativacao)}</td>
+        <td>
+          <div style="display:flex;gap:4px;justify-content:flex-end;">
+            ${l.status === 'ativa' || l.status === 'inativa' ? `
+              <button class="btn-secondary btn-sm" onclick="resetMachine('${escapeHtml(l.chave)}')" title="Liberar pra ativar em outro PC">↺ Reset PC</button>
+              <button class="btn-danger btn-sm" onclick="revogar('${escapeHtml(l.chave)}')" title="Bloquear chave">⊘ Revogar</button>
+            ` : ''}
+            ${(l.order_id || '').startsWith('TEST-') || (l.order_id || '').startsWith('MANUAL-') ? `
+              <button class="btn-secondary btn-sm" onclick="apagarChave('${escapeHtml(l.chave)}')" style="color:var(--danger);" title="Apagar chave de teste">🗑</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>`
+  }).join('')
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Chave</th>
+          <th>Cliente</th>
+          <th>Status</th>
+          <th>Máquina</th>
+          <th>Compra</th>
+          <th>Ativação</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="pagination">
+      <div class="pagination-info">
+        Mostrando ${data.licenses.length} de ${data.total} •
+        Página ${data.page} de ${data.pages}
+      </div>
+      <div class="pagination-controls">
+        <button class="btn-secondary btn-sm" onclick="carregarLicencas(${data.page - 1})" ${data.page <= 1 ? 'disabled' : ''}>← Anterior</button>
+        <button class="btn-secondary btn-sm" onclick="carregarLicencas(${data.page + 1})" ${data.page >= data.pages ? 'disabled' : ''}>Próxima →</button>
+      </div>
+    </div>`
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Ações em chaves
+// ════════════════════════════════════════════════════════════════════
+async function revogar(chave) {
+  const motivo = prompt(`Revogar chave ${chave}?\n\nMotivo (opcional):`)
+  if (motivo === null) return  // cancelou
+  try {
+    await api('/api/admin/revoke', {
+      method: 'POST',
+      body: JSON.stringify({ chave, motivo: motivo || 'Revogada pelo admin' }),
+    })
+    toast('Chave revogada com sucesso', 'success')
+    carregarLicencas(paginaAtual)
+    carregarStats()
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
+}
+
+async function resetMachine(chave) {
+  if (!confirm(`Resetar machine_id de ${chave}?\n\nIsso permite que o cliente ative a chave em outro PC. A chave volta ao status "inativa".`)) return
+  try {
+    await api('/api/admin/reset-machine', {
+      method: 'POST',
+      body: JSON.stringify({ chave }),
+    })
+    toast('Machine resetado — cliente pode ativar em outro PC', 'success')
+    carregarLicencas(paginaAtual)
+    carregarStats()
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
+}
+
+async function apagarChave(chave) {
+  if (!confirm(`Apagar definitivamente a chave ${chave}?\n\nSó funciona pra chaves de teste (TEST-) ou manuais (MANUAL-).`)) return
+  try {
+    await api('/api/admin/test-key?chave=' + encodeURIComponent(chave), {
+      method: 'DELETE',
+    })
+    toast('Chave removida', 'success')
+    carregarLicencas(paginaAtual)
+    carregarStats()
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Criar chave (modal)
+// ════════════════════════════════════════════════════════════════════
+function abrirModalCriar() {
+  document.getElementById('criar-resultado').style.display = 'none'
+  document.getElementById('criar-form').reset()
+  document.getElementById('criar-submit').style.display = ''
+  trocarTipoCriar('teste')
+  document.getElementById('modal-criar').classList.add('active')
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('active')
+}
+
+function trocarTipoCriar(tipo) {
+  tipoCriar = tipo
+  // Visual dos tabs
+  document.getElementById('tab-teste').className = (tipo === 'teste' ? 'btn-primary' : 'btn-secondary') + ' btn-sm'
+  document.getElementById('tab-manual').className = (tipo === 'manual' ? 'btn-primary' : 'btn-secondary') + ' btn-sm'
+  // Texto do botão e ajuda
+  document.getElementById('criar-motivo-wrap').style.display = tipo === 'manual' ? '' : 'none'
+  document.getElementById('modal-criar-titulo').textContent =
+    tipo === 'teste' ? 'Criar chave de teste' : 'Criar chave manual (envia email)'
+}
+
+document.getElementById('criar-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const email  = document.getElementById('criar-email').value
+  const nome   = document.getElementById('criar-nome').value
+  const motivo = document.getElementById('criar-motivo').value
+
+  const btn = document.getElementById('criar-submit')
+  btn.disabled = true
+  btn.textContent = 'Gerando...'
+
+  try {
+    let result
+    if (tipoCriar === 'teste') {
+      result = await api('/api/admin/test-key', {
+        method: 'POST',
+        body: JSON.stringify({ email, nome }),
+      })
+    } else {
+      result = await api('/api/admin/licenses', {
+        method: 'POST',
+        body: JSON.stringify({ email, nome, motivo }),
+      })
+    }
+    // Mostra chave gerada
+    document.getElementById('criar-chave-valor').textContent = result.chave
+    document.getElementById('criar-resultado').style.display = ''
+    btn.style.display = 'none'
+    toast('Chave criada: ' + result.chave, 'success')
+    carregarLicencas(paginaAtual)
+    carregarStats()
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Gerar chave'
+  }
+})
+
+// Copiar chave ao clicar
+document.getElementById('criar-chave-valor').addEventListener('click', (e) => {
+  const chave = e.target.textContent
+  navigator.clipboard.writeText(chave).then(() => {
+    toast('Chave copiada!', 'success')
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════
+//  Inicializa
+// ════════════════════════════════════════════════════════════════════
+function recarregar() {
+  carregarStats()
+  carregarLicencas(paginaAtual)
+  toast('Atualizado', 'info')
+}
+
+// Boot — se já tem token na sessão, vai direto pro app
+if (token && adminEmail) {
+  mostrarApp()
+} else {
+  mostrarLogin()
+}
+
+// Atalho: Enter no campo de busca recarrega
+document.getElementById('filter-q').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') carregarLicencas()
+})
+document.getElementById('filter-status').addEventListener('change', () => carregarLicencas())
+</script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NF-e Desktop — Painel Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #111118;
+      --card:     #16161f;
+      --border:   #24242f;
+      --border2:  #2e2e3f;
+      --primary:  #4f6ef7;
+      --primary2: #3a56e8;
+      --success:  #22c55e;
+      --warning:  #f59e0b;
+      --danger:   #ef4444;
+      --text:     #e8e8f0;
+      --muted:    #6b6b80;
+      --muted2:   #44445a;
+      --mono:     'IBM Plex Mono', monospace;
+      --sans:     'IBM Plex Sans', sans-serif;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+    /* Layout */
+    .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 0;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-title { font-size: 13px; font-weight: 600; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; }
+    .logo-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .nav { flex: 1; padding: 12px 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 6px;
+      color: var(--muted); cursor: pointer; font-size: 13px;
+      transition: all 0.15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover  { background: var(--card); color: var(--text); }
+    .nav-item.active { background: rgba(79,110,247,0.12); color: var(--primary); }
+    .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .logout-btn {
+      width: 100%; padding: 8px 12px; background: none;
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--muted); cursor: pointer; font-size: 12px;
+      font-family: var(--sans); transition: all 0.15s;
+    }
+    .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .main { padding: 32px; overflow-y: auto; }
+
+    /* Header */
+    .page-header { margin-bottom: 28px; }
+    .page-title  { font-size: 22px; font-weight: 600; color: var(--text); }
+    .page-sub    { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* Stats cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card  {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-size: 32px; font-weight: 600; margin-top: 8px; font-family: var(--mono); }
+    .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .stat-green  { color: var(--success); }
+    .stat-yellow { color: var(--warning); }
+    .stat-red    { color: var(--danger); }
+    .stat-blue   { color: var(--primary); }
+
+    /* Table */
+    .table-wrap  {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .table-head  {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .table-head h3 { font-size: 14px; font-weight: 600; flex: 1; }
+    .search-input {
+      padding: 7px 12px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-size: 13px; font-family: var(--sans);
+      width: 220px; outline: none; transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .select {
+      padding: 7px 10px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-size: 13px; font-family: var(--sans);
+      outline: none; cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 10px 20px; text-align: left;
+      font-size: 11px; font-weight: 500; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    td { padding: 12px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .chave-mono { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+    .email-cell { font-size: 13px; }
+    .nome-cell  { font-size: 12px; color: var(--muted); }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+    .badge-green  { background: rgba(34,197,94,0.12);  color: var(--success); }
+    .badge-yellow { background: rgba(245,158,11,0.12); color: var(--warning); }
+    .badge-red    { background: rgba(239,68,68,0.12);  color: var(--danger); }
+    .badge-gray   { background: rgba(107,107,128,0.15); color: var(--muted); }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    /* Buttons */
+    .btn { padding: 7px 14px; border-radius: 6px; font-size: 13px; font-family: var(--sans); cursor: pointer; border: none; font-weight: 500; transition: all 0.15s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary2); }
+    .btn-danger  { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.22); }
+    .btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    /* Login */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+    .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 360px; }
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-title { font-size: 20px; font-weight: 600; }
+    .login-sub   { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .field input  {
+      width: 100%; padding: 10px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 14px; font-family: var(--sans);
+      outline: none; transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: var(--primary); }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 440px; }
+    .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* Eventos */
+    .events-list { display: flex; flex-direction: column; gap: 8px; }
+    .event-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+    .event-tipo { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; min-width: 80px; }
+    .event-chave { font-family: var(--mono); font-size: 11px; color: var(--primary); }
+    .event-data  { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    /* Pagination */
+    .pagination { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); }
+    .page-info  { font-size: 12px; color: var(--muted); flex: 1; }
+
+    /* Utils */
+    .flex { display: flex; }
+    .gap-2 { gap: 8px; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useCallback } = React;
+
+// ── Config ────────────────────────────────────────────────────────────
+// Em produção, a API fica no mesmo domínio — troque se for domínio separado
+const API = window.location.origin;
+
+// ── Utils ─────────────────────────────────────────────────────────────
+function api(path, opts = {}) {
+  const token = localStorage.getItem('admin_token');
+  return fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    ...opts,
+  }).then(r => r.json());
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function StatusBadge({ status }) {
+  const map = { ativa: ['badge-green','●','Ativa'], inativa: ['badge-yellow','●','Inativa'], revogada: ['badge-red','●','Revogada'], suspensa: ['badge-gray','●','Suspensa'] };
+  const [cls, dot, label] = map[status] || ['badge-gray','●', status];
+  return React.createElement('span', { className: 'badge ' + cls },
+    React.createElement('span', { className: 'dot' }), label);
+}
+
+// ── Login ─────────────────────────────────────────────────────────────
+function Login({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [pass, setPass]   = useState('');
+  const [err, setErr]     = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setLoading(true); setErr('');
+    try {
+      const res = await fetch(API + '/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro');
+      localStorage.setItem('admin_token', data.token);
+      onLogin();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return React.createElement('div', { className: 'login-wrap' },
+    React.createElement('form', { className: 'login-card', onSubmit: submit },
+      React.createElement('div', { className: 'login-logo' },
+        React.createElement('div', { className: 'logo-title' }, 'NF-e Desktop'),
+        React.createElement('div', { className: 'login-sub' }, 'Painel Administrativo'),
+      ),
+      err && React.createElement('div', { className: 'error-msg' }, err),
+      React.createElement('div', { className: 'field' },
+        React.createElement('label', null, 'Email'),
+        React.createElement('input', { type: 'email', value: email, onChange: e => setEmail(e.target.value), placeholder: 'admin@...', required: true }),
+      ),
+      React.createElement('div', { className: 'field' },
+        React.createElement('label', null, 'Senha'),
+        React.createElement('input', { type: 'password', value: pass, onChange: e => setPass(e.target.value), placeholder: '••••••••', required: true }),
+      ),
+      React.createElement('button', { type: 'submit', className: 'btn btn-primary', style: { width: '100%', padding: '11px' }, disabled: loading },
+        loading ? 'Entrando...' : 'Entrar'),
+    )
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+function Dashboard() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => { api('/api/admin/stats').then(setStats); }, []);
+
+  if (!stats) return React.createElement('div', { className: 'loading' }, 'Carregando...');
+
+  const cards = [
+    { label: 'Total de licenças', value: stats.total, sub: `${stats.novas30} nos últimos 30 dias`, cls: 'stat-blue' },
+    { label: 'Licenças ativas',   value: stats.ativas,   sub: `${stats.ativacoesHoje} ativações hoje`, cls: 'stat-green' },
+    { label: 'Aguardando ativação', value: stats.inativas, sub: `${stats.novas7} novas esta semana`, cls: 'stat-yellow' },
+    { label: 'Revogadas',         value: stats.revogadas, sub: 'Estornos / cancelamentos', cls: 'stat-red' },
+  ];
+
+  const tipoLabel = { compra: '🛒 Compra', ativacao: '✅ Ativação', validacao: '🔄 Validação', revogacao: '🚫 Revogação', erro: '⚠️ Erro', reset_senha: '🔑 Reset senha' };
+
+  return React.createElement('div', null,
+    React.createElement('div', { className: 'page-header' },
+      React.createElement('h1', { className: 'page-title' }, 'Dashboard'),
+      React.createElement('p', { className: 'page-sub' }, 'Visão geral do sistema de licenças'),
+    ),
+    React.createElement('div', { className: 'stats-grid' },
+      ...cards.map(c =>
+        React.createElement('div', { className: 'stat-card', key: c.label },
+          React.createElement('div', { className: 'stat-label' }, c.label),
+          React.createElement('div', { className: 'stat-value ' + c.cls }, c.value),
+          React.createElement('div', { className: 'stat-sub' }, c.sub),
+        )
+      )
+    ),
+    React.createElement('div', { className: 'table-wrap' },
+      React.createElement('div', { className: 'table-head' },
+        React.createElement('h3', null, 'Últimos eventos'),
+      ),
+      React.createElement('div', { className: 'events-list', style: { padding: '16px' } },
+        ...(stats.eventosRecentes || []).map((ev, i) =>
+          React.createElement('div', { className: 'event-item', key: i },
+            React.createElement('span', { className: 'event-tipo', style: { color: ev.tipo === 'erro' ? 'var(--danger)' : ev.tipo === 'ativacao' ? 'var(--success)' : 'var(--muted)' } },
+              tipoLabel[ev.tipo] || ev.tipo),
+            React.createElement('span', { className: 'event-chave' }, ev.chave || '—'),
+            React.createElement('span', { style: { fontSize: '12px', color: 'var(--muted)' } }, ev.dados?.email || ev.dados?.motivo || ''),
+            React.createElement('span', { className: 'event-data' }, formatDate(ev.data)),
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Licenças ──────────────────────────────────────────────────────────
+function Licenses() {
+  const [data, setData]       = useState({ licenses: [], total: 0, pages: 1 });
+  const [page, setPage]       = useState(1);
+  const [busca, setBusca]     = useState('');
+  const [status, setStatus]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal]     = useState(null); // 'nova' | { revoke: chave }
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api(`/api/admin/licenses?page=${page}&q=${busca}&status=${status}`)
+      .then(setData).finally(() => setLoading(false));
+  }, [page, busca, status]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Debounce busca
+  useEffect(() => {
+    const t = setTimeout(load, 400);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  async function revogar(chave) {
+    if (!confirm(`Revogar a chave ${chave}? O acesso será bloqueado na próxima validação.`)) return;
+    await api('/api/admin/revoke', { method: 'POST', body: JSON.stringify({ chave, motivo: 'Revogado pelo admin' }) });
+    load();
+  }
+
+  return React.createElement('div', null,
+    React.createElement('div', { className: 'page-header', style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' } },
+      React.createElement('div', null,
+        React.createElement('h1', { className: 'page-title' }, 'Licenças'),
+        React.createElement('p', { className: 'page-sub' }, `${data.total} licenças no total`),
+      ),
+      React.createElement('button', { className: 'btn btn-primary', onClick: () => setModal('nova') }, '+ Gerar chave manual'),
+    ),
+
+    React.createElement('div', { className: 'table-wrap' },
+      React.createElement('div', { className: 'table-head' },
+        React.createElement('h3', null, 'Todas as licenças'),
+        React.createElement('input', { className: 'search-input', placeholder: 'Buscar email, nome ou chave...', value: busca, onChange: e => { setBusca(e.target.value); setPage(1); } }),
+        React.createElement('select', { className: 'select', value: status, onChange: e => { setStatus(e.target.value); setPage(1); } },
+          React.createElement('option', { value: '' }, 'Todos os status'),
+          React.createElement('option', { value: 'ativa' }, 'Ativas'),
+          React.createElement('option', { value: 'inativa' }, 'Inativas'),
+          React.createElement('option', { value: 'revogada' }, 'Revogadas'),
+        ),
+      ),
+
+      loading
+        ? React.createElement('div', { className: 'loading' }, 'Carregando...')
+        : React.createElement('table', null,
+            React.createElement('thead', null,
+              React.createElement('tr', null,
+                ...['Chave', 'Cliente', 'Status', 'Ativação', 'Máquina', 'Ações'].map(h =>
+                  React.createElement('th', { key: h }, h))
+              )
+            ),
+            React.createElement('tbody', null,
+              data.licenses.length === 0
+                ? React.createElement('tr', null, React.createElement('td', { colSpan: 6, className: 'empty' }, 'Nenhuma licença encontrada'))
+                : data.licenses.map(l =>
+                    React.createElement('tr', { key: l._id },
+                      React.createElement('td', null, React.createElement('span', { className: 'chave-mono' }, l.chave)),
+                      React.createElement('td', null,
+                        React.createElement('div', { className: 'email-cell' }, l.email),
+                        React.createElement('div', { className: 'nome-cell' }, l.nome),
+                      ),
+                      React.createElement('td', null, React.createElement(StatusBadge, { status: l.status })),
+                      React.createElement('td', null, React.createElement('span', { style: { fontSize: '12px' } }, formatDate(l.data_ativacao))),
+                      React.createElement('td', null, React.createElement('span', { style: { fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)' } }, l.machine_id ? l.machine_id.slice(0, 12) + '...' : '—')),
+                      React.createElement('td', null,
+                        l.status !== 'revogada' &&
+                          React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => revogar(l.chave) }, 'Revogar'),
+                      ),
+                    )
+                  )
+            ),
+          ),
+
+      React.createElement('div', { className: 'pagination' },
+        React.createElement('span', { className: 'page-info' }, `Página ${page} de ${data.pages}`),
+        React.createElement('button', { className: 'btn btn-ghost btn-sm', disabled: page === 1, onClick: () => setPage(p => p - 1) }, '← Anterior'),
+        React.createElement('button', { className: 'btn btn-ghost btn-sm', disabled: page >= data.pages, onClick: () => setPage(p => p + 1) }, 'Próxima →'),
+      ),
+    ),
+
+    modal === 'nova' && React.createElement(NovaChaveModal, { onClose: () => setModal(null), onSave: load }),
+  );
+}
+
+// ── Modal nova chave ──────────────────────────────────────────────────
+function NovaChaveModal({ onClose, onSave }) {
+  const [nome, setNome]     = useState('');
+  const [email, setEmail]   = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [chave, setChave]   = useState('');
+
+  async function salvar() {
+    if (!nome || !email) return;
+    setLoading(true);
+    const res = await api('/api/admin/licenses', { method: 'POST', body: JSON.stringify({ nome, email, motivo }) });
+    setChave(res.chave);
+    setLoading(false);
+    onSave();
+  }
+
+  return React.createElement('div', { className: 'overlay', onClick: e => e.target === e.currentTarget && onClose() },
+    React.createElement('div', { className: 'modal' },
+      React.createElement('h3', null, 'Gerar chave manual'),
+      chave
+        ? React.createElement('div', null,
+            React.createElement('p', { style: { fontSize: '13px', color: 'var(--muted)', marginBottom: 12 } }, 'Chave gerada e email enviado:'),
+            React.createElement('div', { style: { background: 'rgba(79,110,247,0.1)', border: '1px solid rgba(79,110,247,0.3)', borderRadius: 8, padding: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 20, color: 'var(--primary)', letterSpacing: 4 } }, chave),
+            React.createElement('div', { className: 'modal-footer' },
+              React.createElement('button', { className: 'btn btn-primary', onClick: onClose }, 'Fechar'),
+            ),
+          )
+        : React.createElement('div', null,
+            React.createElement('div', { className: 'field' },
+              React.createElement('label', null, 'Nome completo *'),
+              React.createElement('input', { placeholder: 'João da Silva', value: nome, onChange: e => setNome(e.target.value) }),
+            ),
+            React.createElement('div', { className: 'field' },
+              React.createElement('label', null, 'Email *'),
+              React.createElement('input', { type: 'email', placeholder: 'joao@email.com', value: email, onChange: e => setEmail(e.target.value) }),
+            ),
+            React.createElement('div', { className: 'field' },
+              React.createElement('label', null, 'Motivo (opcional)'),
+              React.createElement('input', { placeholder: 'Cortesia, suporte, reemissão...', value: motivo, onChange: e => setMotivo(e.target.value) }),
+            ),
+            React.createElement('div', { className: 'modal-footer' },
+              React.createElement('button', { className: 'btn btn-ghost', onClick: onClose }, 'Cancelar'),
+              React.createElement('button', { className: 'btn btn-primary', onClick: salvar, disabled: loading || !nome || !email },
+                loading ? 'Gerando...' : 'Gerar e enviar email'),
+            ),
+          ),
+    )
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────
+function App() {
+  const [auth, setAuth]     = useState(!!localStorage.getItem('admin_token'));
+  const [pagina, setPagina] = useState('dashboard');
+
+  if (!auth) return React.createElement(Login, { onLogin: () => setAuth(true) });
+
+  const navItems = [
+    { id: 'dashboard', icon: '◈', label: 'Dashboard' },
+    { id: 'licenses',  icon: '⊟', label: 'Licenças' },
+  ];
+
+  function logout() {
+    localStorage.removeItem('admin_token');
+    setAuth(false);
+  }
+
+  return React.createElement('div', { className: 'layout' },
+    // Sidebar
+    React.createElement('aside', { className: 'sidebar' },
+      React.createElement('div', { className: 'sidebar-logo' },
+        React.createElement('div', { className: 'logo-title' }, 'NF-e Desktop'),
+        React.createElement('div', { className: 'logo-sub' }, 'Painel Admin'),
+      ),
+      React.createElement('nav', { className: 'nav' },
+        ...navItems.map(item =>
+          React.createElement('button', {
+            key: item.id,
+            className: 'nav-item' + (pagina === item.id ? ' active' : ''),
+            onClick: () => setPagina(item.id),
+          },
+            React.createElement('span', { className: 'nav-icon' }, item.icon),
+            item.label,
+          )
+        )
+      ),
+      React.createElement('div', { className: 'sidebar-footer' },
+        React.createElement('button', { className: 'logout-btn', onClick: logout }, '← Sair'),
+      ),
+    ),
+    // Main
+    React.createElement('main', { className: 'main' },
+      pagina === 'dashboard' ? React.createElement(Dashboard) : React.createElement(Licenses),
+    ),
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
