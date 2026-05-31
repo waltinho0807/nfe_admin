@@ -68,7 +68,36 @@ const EventSchema = new mongoose.Schema({
   data:  { type: Date, default: Date.now },
 })
 
+// ── Tickets de suporte (mensagens vindas do formulário do site) ──────
+const TicketSchema = new mongoose.Schema({
+  // ticket_id legível pro cliente (TKT-XXXXXX) — gerado na criação
+  ticket_id:  { type: String, required: true, unique: true, index: true },
+  nome:       { type: String, required: true },
+  email:      { type: String, required: true, index: true },
+  telefone:   { type: String, default: '' },
+  categoria:  {
+    type: String,
+    enum: ['bug', 'doubt', 'suggestion', 'other'],
+    default: 'other',
+    index: true,
+  },
+  mensagem:   { type: String, required: true },
+  // anexos: array de { url, filename, size, mime_type } (do Vercel Blob)
+  anexos:     { type: [mongoose.Schema.Types.Mixed], default: [] },
+  status:     {
+    type: String,
+    enum: ['novo', 'em_andamento', 'resolvido'],
+    default: 'novo',
+    index: true,
+  },
+  // se o Turnstile foi validado com sucesso no servidor
+  turnstile_ok: { type: Boolean, default: false },
+  ip:         { type: String, default: '' },
+  user_agent: { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+
 // Evita redefinir modelos no hot-reload do Next.js
 export const License    = mongoose.models.License    || mongoose.model('License',    LicenseSchema)
 export const Activation = mongoose.models.Activation || mongoose.model('Activation', ActivationSchema)
 export const Event      = mongoose.models.Event      || mongoose.model('Event',      EventSchema)
+export const Ticket     = mongoose.models.Ticket     || mongoose.model('Ticket',     TicketSchema)

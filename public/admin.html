@@ -332,6 +332,128 @@
       color: var(--gray-500);
     }
     .pagination-controls { display: flex; gap: 6px; }
+
+    /* ── Abas (Licenças | Suporte) ─────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--gray-200);
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-500);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover { color: var(--gray-700); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-badge {
+      background: var(--danger);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Ticket de suporte ─────────────────────────────────────────── */
+    .ticket {
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      background: white;
+    }
+    .ticket.novo { border-left: 4px solid var(--danger); }
+    .ticket.em_andamento { border-left: 4px solid var(--warning); }
+    .ticket.resolvido { border-left: 4px solid var(--success); opacity: 0.75; }
+    .ticket-head {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .ticket-head:hover { background: var(--gray-50); }
+    .ticket-cat {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .ticket-cat.bug { background: var(--danger-bg); color: var(--danger); }
+    .ticket-cat.doubt { background: #eff6ff; color: var(--primary); }
+    .ticket-cat.suggestion { background: var(--warning-bg); color: var(--warning); }
+    .ticket-cat.other { background: var(--gray-100); color: var(--gray-500); }
+    .ticket-info { flex: 1; min-width: 0; }
+    .ticket-nome { font-weight: 600; font-size: 14px; }
+    .ticket-email { font-size: 12px; color: var(--gray-500); }
+    .ticket-meta { text-align: right; font-size: 12px; color: var(--gray-500); }
+    .ticket-body {
+      display: none;
+      padding: 16px;
+      border-top: 1px solid var(--gray-200);
+      background: var(--gray-50);
+    }
+    .ticket-body.open { display: block; }
+    .ticket-msg {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 12px;
+    }
+    .ticket-anexos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .ticket-anexo {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: white;
+      border: 1px solid var(--gray-300);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .ticket-anexo:hover { background: var(--gray-50); }
+    .ticket-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .ticket-detail-row {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--gray-700);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .ticket-detail-row b { color: var(--gray-900); }
+    .badge-novo { background: var(--danger-bg); color: var(--danger); }
+    .badge-em_andamento { background: var(--warning-bg); color: var(--warning); }
+    .badge-resolvido { background: var(--success-bg); color: var(--success); }
+    .verif-ok { color: var(--success); font-size: 12px; }
+    .verif-no { color: var(--gray-500); font-size: 12px; }
   </style>
 </head>
 <body>
@@ -368,6 +490,19 @@
   </header>
 
   <main>
+    <!-- ── Navegação por abas ── -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tabbtn-licencas" onclick="trocarAba('licencas')">
+        🔑 Licenças
+      </button>
+      <button class="tab-btn" id="tabbtn-suporte" onclick="trocarAba('suporte')">
+        💬 Suporte
+        <span class="tab-badge" id="badge-novos" style="display:none;">0</span>
+      </button>
+    </div>
+
+    <!-- ════════════ ABA LICENÇAS ════════════ -->
+    <div class="tab-content active" id="tab-licencas">
     <!-- ── Stats ── -->
     <div class="stats-grid" id="stats-grid">
       <div class="stat-card">
@@ -423,6 +558,54 @@
         </div>
       </div>
     </div>
+    </div><!-- /tab-licencas -->
+
+    <!-- ════════════ ABA SUPORTE ════════════ -->
+    <div class="tab-content" id="tab-suporte">
+      <!-- Stats de suporte -->
+      <div class="stats-grid">
+        <div class="stat-card danger">
+          <div class="label">Novos</div>
+          <div class="value" id="stat-tk-novos">—</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="label">Em andamento</div>
+          <div class="value" id="stat-tk-andamento">—</div>
+        </div>
+        <div class="stat-card success">
+          <div class="label">Resolvidos</div>
+          <div class="value" id="stat-tk-resolvidos">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Tickets de Suporte</h2>
+          <div class="filters">
+            <input type="text" id="tk-filter-q" placeholder="Buscar nome/email/mensagem" style="width:220px;">
+            <select id="tk-filter-status">
+              <option value="">Todos os status</option>
+              <option value="novo">Novos</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="resolvido">Resolvidos</option>
+            </select>
+            <select id="tk-filter-cat">
+              <option value="">Todas categorias</option>
+              <option value="bug">Bug</option>
+              <option value="doubt">Dúvida</option>
+              <option value="suggestion">Sugestão</option>
+              <option value="other">Outro</option>
+            </select>
+            <button class="btn-secondary btn-sm" onclick="carregarTickets()">Filtrar</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="tickets-container">
+            <div class="loading">Carregando tickets...</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tab-suporte -->
   </main>
 </div>
 
@@ -556,6 +739,17 @@ function mostrarApp() {
   document.getElementById('admin-email-display').textContent = adminEmail
   carregarStats()
   carregarLicencas()
+  carregarBadgeTickets()  // só a contagem, pro badge na aba
+}
+
+// Busca só a contagem de tickets novos (pro badge), sem renderizar a lista
+async function carregarBadgeTickets() {
+  try {
+    const data = await api('/api/admin/tickets?limit=1')
+    atualizarBadgeNovos(data.contadores?.novos ?? 0)
+  } catch {
+    // silencioso — se falhar, badge fica escondido
+  }
 }
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -829,6 +1023,179 @@ document.getElementById('criar-chave-valor').addEventListener('click', (e) => {
     toast('Chave copiada!', 'success')
   })
 })
+
+// ════════════════════════════════════════════════════════════════════
+//  Abas (Licenças | Suporte)
+// ════════════════════════════════════════════════════════════════════
+let abaAtual = 'licencas'
+let tkPaginaAtual = 1
+
+function trocarAba(aba) {
+  abaAtual = aba
+  // botões
+  document.getElementById('tabbtn-licencas').classList.toggle('active', aba === 'licencas')
+  document.getElementById('tabbtn-suporte').classList.toggle('active', aba === 'suporte')
+  // conteúdo
+  document.getElementById('tab-licencas').classList.toggle('active', aba === 'licencas')
+  document.getElementById('tab-suporte').classList.toggle('active', aba === 'suporte')
+  // carrega dados da aba ao abrir
+  if (aba === 'suporte') carregarTickets()
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Tickets de suporte
+// ════════════════════════════════════════════════════════════════════
+const CATEGORIA_LABEL = {
+  bug: 'Bug',
+  doubt: 'Dúvida',
+  suggestion: 'Sugestão',
+  other: 'Outro',
+}
+const STATUS_LABEL = {
+  novo: 'Novo',
+  em_andamento: 'Em andamento',
+  resolvido: 'Resolvido',
+}
+
+function fmtDataHora(s) {
+  if (!s) return '—'
+  try {
+    return new Date(s).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+  } catch { return s }
+}
+
+async function carregarTickets(page = 1) {
+  tkPaginaAtual = page
+  const container = document.getElementById('tickets-container')
+  container.innerHTML = '<div class="loading">Carregando tickets...</div>'
+
+  const q      = document.getElementById('tk-filter-q').value.trim()
+  const status = document.getElementById('tk-filter-status').value
+  const cat    = document.getElementById('tk-filter-cat').value
+
+  const params = new URLSearchParams({ page: String(page), limit: '20' })
+  if (q)      params.set('q', q)
+  if (status) params.set('status', status)
+  if (cat)    params.set('categoria', cat)
+
+  try {
+    const data = await api('/api/admin/tickets?' + params.toString())
+
+    // atualiza stats + badge
+    document.getElementById('stat-tk-novos').textContent      = data.contadores?.novos ?? 0
+    document.getElementById('stat-tk-andamento').textContent  = data.contadores?.emAndamento ?? 0
+    document.getElementById('stat-tk-resolvidos').textContent = data.contadores?.resolvidos ?? 0
+    atualizarBadgeNovos(data.contadores?.novos ?? 0)
+
+    if (!data.tickets || data.tickets.length === 0) {
+      container.innerHTML = '<div class="empty">Nenhum ticket encontrado.</div>'
+      return
+    }
+
+    container.innerHTML = data.tickets.map(t => renderTicket(t)).join('')
+
+    // paginação
+    if (data.pages > 1) {
+      container.innerHTML += `
+        <div class="pagination">
+          <div class="pagination-info">Página ${data.page} de ${data.pages} · ${data.total} tickets</div>
+          <div class="pagination-controls">
+            <button class="btn-secondary btn-sm" onclick="carregarTickets(${data.page - 1})" ${data.page <= 1 ? 'disabled' : ''}>← Anterior</button>
+            <button class="btn-secondary btn-sm" onclick="carregarTickets(${data.page + 1})" ${data.page >= data.pages ? 'disabled' : ''}>Próxima →</button>
+          </div>
+        </div>`
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="empty">Erro ao carregar: ${escapeHtml(err.message)}</div>`
+  }
+}
+
+function renderTicket(t) {
+  const cat = t.categoria || 'other'
+  const status = t.status || 'novo'
+  const anexos = Array.isArray(t.anexos) ? t.anexos : []
+
+  const anexosHtml = anexos.length > 0
+    ? `<div class="ticket-anexos">${anexos.map(a => `
+        <a class="ticket-anexo" href="${escapeHtml(a.url)}" target="_blank" rel="noopener">
+          📎 ${escapeHtml(a.filename || 'anexo')}
+        </a>`).join('')}</div>`
+    : ''
+
+  const verif = t.turnstile_ok
+    ? '<span class="verif-ok">✓ Verificado (anti-spam)</span>'
+    : '<span class="verif-no">○ Não verificado</span>'
+
+  return `
+    <div class="ticket ${status}" id="tk-${escapeHtml(t.ticket_id)}">
+      <div class="ticket-head" onclick="toggleTicket('${escapeHtml(t.ticket_id)}')">
+        <span class="ticket-cat ${cat}">${CATEGORIA_LABEL[cat] || cat}</span>
+        <div class="ticket-info">
+          <div class="ticket-nome">${escapeHtml(t.nome)}</div>
+          <div class="ticket-email">${escapeHtml(t.email)}</div>
+        </div>
+        <div class="ticket-meta">
+          <span class="badge badge-${status}">${STATUS_LABEL[status] || status}</span>
+          <div style="margin-top:4px;">${fmtDataHora(t.created_at)}</div>
+        </div>
+      </div>
+      <div class="ticket-body" id="tkbody-${escapeHtml(t.ticket_id)}">
+        <div class="ticket-detail-row">
+          <span><b>Ticket:</b> ${escapeHtml(t.ticket_id)}</span>
+          ${t.telefone ? `<span><b>Tel:</b> ${escapeHtml(t.telefone)}</span>` : ''}
+          <span>${verif}</span>
+        </div>
+        <div class="ticket-msg">${escapeHtml(t.mensagem)}</div>
+        ${anexosHtml}
+        <div class="ticket-actions">
+          <span style="font-size:13px;color:var(--gray-500);">Marcar como:</span>
+          <button class="btn-secondary btn-sm" onclick="mudarStatusTicket('${escapeHtml(t.ticket_id)}','novo')" ${status === 'novo' ? 'disabled' : ''}>Novo</button>
+          <button class="btn-secondary btn-sm" onclick="mudarStatusTicket('${escapeHtml(t.ticket_id)}','em_andamento')" ${status === 'em_andamento' ? 'disabled' : ''}>Em andamento</button>
+          <button class="btn-primary btn-sm" onclick="mudarStatusTicket('${escapeHtml(t.ticket_id)}','resolvido')" ${status === 'resolvido' ? 'disabled' : ''}>Resolvido</button>
+          <a class="btn-secondary btn-sm" href="mailto:${escapeHtml(t.email)}?subject=Re: Suporte ${escapeHtml(t.ticket_id)}" style="text-decoration:none;">✉ Responder por email</a>
+        </div>
+      </div>
+    </div>`
+}
+
+function toggleTicket(id) {
+  const body = document.getElementById('tkbody-' + id)
+  if (body) body.classList.toggle('open')
+}
+
+async function mudarStatusTicket(id, status) {
+  try {
+    await api('/api/admin/tickets/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+    toast('Status atualizado', 'success')
+    carregarTickets(tkPaginaAtual)
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
+}
+
+function atualizarBadgeNovos(n) {
+  const badge = document.getElementById('badge-novos')
+  if (!badge) return
+  if (n > 0) {
+    badge.textContent = n
+    badge.style.display = 'inline-block'
+  } else {
+    badge.style.display = 'none'
+  }
+}
+
+// Atalho: Enter na busca de tickets
+document.getElementById('tk-filter-q').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') carregarTickets()
+})
+document.getElementById('tk-filter-status').addEventListener('change', () => carregarTickets())
+document.getElementById('tk-filter-cat').addEventListener('change', () => carregarTickets())
 
 // ════════════════════════════════════════════════════════════════════
 //  Inicializa
