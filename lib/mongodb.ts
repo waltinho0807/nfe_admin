@@ -96,8 +96,37 @@ const TicketSchema = new mongoose.Schema({
   user_agent: { type: String, default: '' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 
+// ── Tabela IBPT (alíquotas de tributos aproximados por NCM/UF) ───────
+// Usada pra calcular o "Valor Aproximado dos Tributos" (Lei 12.741) que
+// aparece na DANFE. Dados oficiais do IBPT, importados periodicamente
+// via scripts/importar-ibpt.ts. O app desktop baixa o estado do emitente
+// pelo endpoint /api/ibpt e calcula localmente.
+const IbptAliquotaSchema = new mongoose.Schema({
+  uf:                { type: String, required: true },
+  ncm:               { type: String, required: true },
+  ex:                { type: String, default: '' },
+  descricao:         { type: String, default: '' },
+  nacional_federal:  { type: Number, default: 0 },
+  importado_federal: { type: Number, default: 0 },
+  estadual:          { type: Number, default: 0 },
+  municipal:         { type: Number, default: 0 },
+  vigencia_inicio:   { type: String, default: '' },
+  vigencia_fim:      { type: String, default: '' },
+  versao:            { type: String, default: '' },
+})
+// Índice composto pra busca rápida por estado (o app baixa um estado inteiro)
+IbptAliquotaSchema.index({ uf: 1, ncm: 1 })
+
+// Metadados da tabela IBPT carregada (versão vigente, etc.)
+const IbptMetaSchema = new mongoose.Schema({
+  chave: { type: String, required: true, unique: true },
+  valor: { type: String, default: '' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+
 // Evita redefinir modelos no hot-reload do Next.js
 export const License    = mongoose.models.License    || mongoose.model('License',    LicenseSchema)
 export const Activation = mongoose.models.Activation || mongoose.model('Activation', ActivationSchema)
 export const Event      = mongoose.models.Event      || mongoose.model('Event',      EventSchema)
 export const Ticket     = mongoose.models.Ticket     || mongoose.model('Ticket',     TicketSchema)
+export const IbptAliquota = mongoose.models.IbptAliquota || mongoose.model('IbptAliquota', IbptAliquotaSchema)
+export const IbptMeta     = mongoose.models.IbptMeta     || mongoose.model('IbptMeta',     IbptMetaSchema)
