@@ -46,6 +46,16 @@ const LicenseSchema = new mongoose.Schema({
   data_compra:   { type: Date, default: Date.now },
   data_ativacao: { type: Date, default: null },
   ultimo_acesso: { type: Date, default: null },
+  // ── Novo modelo de negócio (trial 15d → anual) ─────────────────────
+  // ADITIVO: docs antigos sem estes campos leem os defaults abaixo
+  // (vitalicia + expira_em null = nunca expira) → comportamento
+  // IDÊNTICO ao anterior, sem migração de dados.
+  plano:      { type: String, enum: ['vitalicia', 'anual', 'trial'],
+                default: 'vitalicia' },
+  expira_em:  { type: Date, default: null },      // null = nunca expira
+  origem:     { type: String, default: 'hotmart' }, // hotmart | site | mp
+  email_norm: { type: String, default: '', index: true }, // anti-alias
+  lembretes_enviados: { type: [String], default: [] }, // tags anti-duplicata
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 
 const ActivationSchema = new mongoose.Schema({
@@ -59,7 +69,8 @@ const ActivationSchema = new mongoose.Schema({
 const EventSchema = new mongoose.Schema({
   tipo:  {
     type: String,
-    enum: ['compra', 'ativacao', 'validacao', 'revogacao', 'reset_senha', 'erro'],
+    enum: ['compra', 'ativacao', 'validacao', 'revogacao', 'reset_senha', 'erro',
+           'trial', 'pagamento'],
     required: true
   },
   chave: { type: String, index: true },

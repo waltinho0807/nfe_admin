@@ -533,6 +533,18 @@
         <div class="label">Ativações hoje</div>
         <div class="value" id="stat-hoje">—</div>
       </div>
+      <div class="stat-card warning">
+        <div class="label">Trials ativos</div>
+        <div class="value" id="stat-trials">—</div>
+      </div>
+      <div class="stat-card success">
+        <div class="label">Assinantes (anual)</div>
+        <div class="value" id="stat-anuais">—</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="label">Vencendo em 7d</div>
+        <div class="value" id="stat-vencendo">—</div>
+      </div>
     </div>
 
     <!-- ── Lista de licenças ── -->
@@ -718,6 +730,25 @@ function statusBadge(s) {
   return `<span class="badge ${cls}">${s}</span>`
 }
 
+function planoBadge(l) {
+  const plano = l.plano || 'vitalicia'
+  if (plano === 'vitalicia') {
+    return '<span class="badge badge-default">vitalícia</span>'
+  }
+  const exp = l.expira_em ? new Date(l.expira_em) : null
+  const vencida = exp && exp.getTime() < Date.now()
+  const dias = exp ? Math.ceil((exp.getTime() - Date.now()) / 86400000) : null
+  const cls = vencida ? 'badge-danger'
+            : (plano === 'trial' ? 'badge-warning' : 'badge-success')
+  const rotulo = vencida ? `${plano} vencida` : plano
+  const sub = exp
+    ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">`
+      + `${vencida ? 'venceu' : 'até'} ${fmtData(l.expira_em)}`
+      + `${!vencida && dias != null ? ' · ' + dias + 'd' : ''}</div>`
+    : ''
+  return `<span class="badge ${cls}">${rotulo}</span>${sub}`
+}
+
 function escapeHtml(s) {
   if (s == null) return ''
   return String(s)
@@ -808,6 +839,11 @@ async function carregarStats() {
     document.getElementById('stat-novas7').textContent    = stats.novas7 ?? 0
     document.getElementById('stat-novas30').textContent   = stats.novas30 ?? 0
     document.getElementById('stat-hoje').textContent      = stats.ativacoesHoje ?? 0
+    if (data.funil) {
+      document.getElementById('stat-trials').textContent = data.funil.trials
+      document.getElementById('stat-anuais').textContent = data.funil.anuais
+      document.getElementById('stat-vencendo').textContent = data.funil.vencendo_7d
+    }
   } catch (err) {
     toast('Erro ao carregar stats: ' + err.message, 'error')
   }
@@ -860,6 +896,7 @@ function renderLicencas(data) {
           <div style="font-size:12px;color:var(--gray-500);">${escapeHtml(l.email)}</div>
         </td>
         <td>${statusBadge(l.status)}</td>
+        <td>${planoBadge(l)}</td>
         <td>${machine}</td>
         <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_compra)}</td>
         <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_ativacao)}</td>
@@ -884,6 +921,7 @@ function renderLicencas(data) {
           <th>Chave</th>
           <th>Cliente</th>
           <th>Status</th>
+          <th>Plano</th>
           <th>Máquina</th>
           <th>Compra</th>
           <th>Ativação</th>

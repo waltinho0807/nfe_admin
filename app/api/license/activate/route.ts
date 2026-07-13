@@ -78,6 +78,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── ANTI-ABUSO: 1 trial por MÁQUINA ─────────────────────────
+    // A coleção Activation é o livro-razão permanente: se ESTA máquina
+    // já ativou QUALQUER outra chave antes, um trial novo aqui é
+    // reciclagem de teste (e-mail novo, mesmo PC). Bloqueia — mas com
+    // porta de conversão: pagar transforma a chave em 'anual', e
+    // ativação de anual passa por esta regra normalmente.
+    const plano = (license.plano as string) || 'vitalicia'
+    if (plano === 'trial') {
+      const maquinaJaUsada = await Activation.findOne({
+        machine_id, chave: { $ne: chave },
+      })
+      if (maquinaJaUsada) {
+        await Event.create({
+          tipo: 'erro', chave,
+          dados: { motivo: 'Trial repetido na mesma maquina',
+                   machine_id, ip,
+                   chave_anterior: maquinaJaUsada.chave },
+        }).catch(() => {})
+        return NextResponse.json({
+          valid: false,
+          code:  'trial_machine_used',
+          message: 'Este computador já utilizou o período de teste '
+            + 'gratuito. Para continuar usando o NF-e Desktop, assine — '
+            + 'o pagamento libera a ativação na hora, com esta mesma '
+            + 'chave.',
+        }, { status: 403 })
+      }
+    }
+
     // Primeira ativacao — salva machine_id e ativa
     await License.updateOne({ chave }, {
       status:        'ativa',

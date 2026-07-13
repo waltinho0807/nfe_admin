@@ -34,6 +34,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, code: 'machine_mismatch' }, { status: 403 })
     }
 
+    // ── Novo modelo: expiracao (trial/anual) ───────────────────────
+    // Vitalicia tem plano 'vitalicia' + expira_em null → NUNCA entra
+    // aqui: comportamento identico ao anterior. Enforcement da
+    // "revogacao automatica": venceu, a proxima validacao nega.
+    const plano = (license.plano as string) || 'vitalicia'
+    const expiraEm: Date | null = license.expira_em || null
+    if (plano !== 'vitalicia' && expiraEm
+        && expiraEm.getTime() < Date.now()) {
+      await Event.create({
+        tipo: 'validacao', chave,
+        dados: { machine_id, resultado: 'expired', plano },
+      }).catch(() => {})
+      return NextResponse.json({
+        valid: false, code: 'expired', plano,
+        expira_em: expiraEm.toISOString(),
+        message: plano === 'trial'
+          ? 'Seu período de teste terminou. Assine para continuar emitindo.'
+          : 'Sua assinatura venceu. Renove para continuar emitindo.',
+      }, { status: 403 })
+    }
+    const diasRestantes = (plano !== 'vitalicia' && expiraEm)
+      ? Math.max(0, Math.ceil((expiraEm.getTime() - Date.now()) / 86400000))
+      : null
+
     // Atualiza ultimo acesso
     await License.updateOne({ chave }, { ultimo_acesso: new Date() })
     await Event.create({
@@ -41,7 +65,13 @@ export async function POST(req: NextRequest) {
       dados: { machine_id, ip: req.headers.get('x-forwarded-for') }
     })
 
-    return NextResponse.json({ valid: true, code: 'ok', message: 'OK' })
+    return NextResponse.json({
+      valid: true, code: 'ok', message: 'OK',
+      // Campos novos (o desktop antigo ignora — aditivo):
+      plano,
+      expira_em: expiraEm ? expiraEm.toISOString() : null,
+      dias_restantes: diasRestantes,
+    })
 
   } catch (err) {
     console.error('Erro em /validate:', err)
