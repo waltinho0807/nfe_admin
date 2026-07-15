@@ -9,7 +9,8 @@ import { gerarChaveUnica } from '@/lib/license'
 import { validarTurnstile } from '@/lib/turnstile'
 import { calcularExpiracaoTrial, DIAS_TRIAL } from '@/lib/billing'
 import { normalizarEmail, ehEmailDescartavel,
-         LIMITE_TRIALS_POR_IP_DIA } from '@/lib/antiabuso'
+         LIMITE_TRIALS_POR_IP_DIA,
+         LIMITE_SEM_TURNSTILE_POR_IP_DIA } from '@/lib/antiabuso'
 import { enviarEmailTrial } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
@@ -25,13 +26,20 @@ export async function POST(req: NextRequest) {
         { ok: false, code: 'invalid_params',
           message: 'Informe seu nome e um e-mail válido.' }, { status: 400 })
     }
-    const turnstile = await validarTurnstile(token, ip)
-    if (!turnstile.success) {
-      return NextResponse.json(
-        { ok: false, code: 'turnstile',
-          message: 'Verificação anti-robô falhou. Recarregue e tente de novo.' },
-        { status: 400 })
+    // ── Turnstile FAIL-OPEN ──────────────────────────────────────
+    // Não barra o usuário: se o desafio não validou (widget bloqueado,
+    // token expirado, Cloudflare fora), o trial é criado do mesmo
+    // jeito — só com o teto de IP mais apertado. Bot esbarra nas
+    // outras camadas (e-mail normalizado, temp-mail, 1 trial por
+    // MÁQUINA na ativação).
+    let turnstileStatus: 'ok' | 'ausente' | 'falhou' = 'ausente'
+    if (token) {
+      const t = await validarTurnstile(token, ip)
+      turnstileStatus = t.success ? 'ok' : 'falhou'
     }
+    const limiteIp = turnstileStatus === 'ok'
+      ? LIMITE_TRIALS_POR_IP_DIA
+      : LIMITE_SEM_TURNSTILE_POR_IP_DIA
 
     // Temp-mail: a chave chega POR e-mail — descartável = abuso na certa
     if (ehEmailDescartavel(email)) {
@@ -49,7 +57,7 @@ export async function POST(req: NextRequest) {
     const trialsDoIp = await Event.countDocuments({
       tipo: 'trial', 'dados.ip': ip, data: { $gte: desde },
     })
-    if (trialsDoIp >= LIMITE_TRIALS_POR_IP_DIA) {
+    if (trialsDoIp >= limiteIp) {
       return NextResponse.json(
         { ok: false, code: 'rate_limit',
           message: 'Muitos testes criados a partir desta conexão hoje. '
@@ -87,7 +95,9 @@ export async function POST(req: NextRequest) {
       origem: 'site',
     })
     await Event.create({
-      tipo: 'trial', chave, dados: { email, nome, ip, dias: DIAS_TRIAL },
+      tipo: 'trial', chave,
+      dados: { email, nome, ip, dias: DIAS_TRIAL,
+               turnstile: turnstileStatus },
     }).catch(() => {})
 
     try {

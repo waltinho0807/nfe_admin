@@ -15,6 +15,14 @@
 
 export const LIMITE_TRIALS_POR_IP_DIA = 3
 
+// Fail-open do Turnstile: quando o desafio NÃO validou (widget não
+// carregou por adblock/rede corporativa, token expirou, CDN fora), o
+// trial é criado MESMO ASSIM — nenhum humano fica preso no funil (isso
+// é tráfego pago: lead travado = dinheiro queimado).
+// O freio vira o IP: sem verificação, 1 por IP/dia — o suficiente pro
+// humano legítimo (que só precisa de UM trial) e apertado pro bot.
+export const LIMITE_SEM_TURNSTILE_POR_IP_DIA = 1
+
 /** Domínios que tratam +sufixo e (no caso do gmail) pontos como alias. */
 const DOMINIOS_COM_ALIAS_DE_PONTO = new Set([
   'gmail.com', 'googlemail.com',
