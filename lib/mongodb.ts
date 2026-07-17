@@ -36,8 +36,6 @@ const LicenseSchema = new mongoose.Schema({
   chave:         { type: String, required: true, unique: true, index: true },
   email:         { type: String, required: true, index: true },
   nome:          { type: String, required: true },
-  sobrenome:     { type: String, default: '' },
-  telefone:      { type: String, default: '' },
   order_id:      { type: String, required: true, unique: true },
   status:        {
     type: String,
@@ -56,7 +54,6 @@ const LicenseSchema = new mongoose.Schema({
                 default: 'vitalicia' },
   expira_em:  { type: Date, default: null },      // null = nunca expira
   origem:     { type: String, default: 'hotmart' }, // hotmart | site | mp
-  email_norm: { type: String, default: '', index: true }, // anti-alias
   lembretes_enviados: { type: [String], default: [] }, // tags anti-duplicata
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 
