@@ -36,6 +36,8 @@ const LicenseSchema = new mongoose.Schema({
   chave:         { type: String, required: true, unique: true, index: true },
   email:         { type: String, required: true, index: true },
   nome:          { type: String, required: true },
+  sobrenome:     { type: String, default: '' },
+  telefone:      { type: String, default: '' },
   order_id:      { type: String, required: true, unique: true },
   status:        {
     type: String,

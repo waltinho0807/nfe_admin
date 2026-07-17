@@ -16,15 +16,28 @@ import { enviarEmailTrial } from '@/lib/email'
 export async function POST(req: NextRequest) {
   try {
     const body  = await req.json().catch(() => ({}))
-    const nome  = String(body?.nome  || '').trim().slice(0, 120)
-    const email = String(body?.email || '').trim().toLowerCase()
+    const nome      = String(body?.nome      || '').trim().slice(0, 80)
+    const sobrenome = String(body?.sobrenome || '').trim().slice(0, 80)
+    const telefone  = String(body?.telefone  || '').replace(/\D/g, '').slice(0, 13)
+    const email     = String(body?.email     || '').trim().toLowerCase()
     const token = String(body?.turnstile_token || '')
     const ip    = req.headers.get('x-forwarded-for') || 'unknown'
 
-    if (!nome || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!nome || !sobrenome) {
       return NextResponse.json(
         { ok: false, code: 'invalid_params',
-          message: 'Informe seu nome e um e-mail válido.' }, { status: 400 })
+          message: 'Informe seu nome e sobrenome.' }, { status: 400 })
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { ok: false, code: 'invalid_params',
+          message: 'Informe um e-mail válido.' }, { status: 400 })
+    }
+    if (telefone.length < 10 || telefone.length > 11) {
+      return NextResponse.json(
+        { ok: false, code: 'invalid_params',
+          message: 'Informe um telefone com DDD (ex: 11 91234-5678).' },
+        { status: 400 })
     }
     // ── Turnstile FAIL-OPEN ──────────────────────────────────────
     // Não barra o usuário: se o desafio não validou (widget bloqueado,
@@ -86,7 +99,7 @@ export async function POST(req: NextRequest) {
     const chave = await gerarChaveUnica()
     const expira = calcularExpiracaoTrial()
     await License.create({
-      chave, email, nome,
+      chave, email, nome, sobrenome, telefone,
       email_norm: emailNorm,
       order_id: `TRIAL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
       status: 'inativa',            // ativa quando o app vincular a máquina
@@ -96,12 +109,12 @@ export async function POST(req: NextRequest) {
     })
     await Event.create({
       tipo: 'trial', chave,
-      dados: { email, nome, ip, dias: DIAS_TRIAL,
+      dados: { email, nome, sobrenome, telefone, ip, dias: DIAS_TRIAL,
                turnstile: turnstileStatus },
     }).catch(() => {})
 
     try {
-      await enviarEmailTrial(email, nome, chave, expira)
+      await enviarEmailTrial(email, `${nome} ${sobrenome}`.trim(), chave, expira)
     } catch (e) {
       console.error('Falha ao enviar email do trial:', e)
       return NextResponse.json(
