@@ -666,6 +666,22 @@
   </div>
 </div>
 
+<!-- ══ Modal: ficha completa do cliente + edição ══════════════════ -->
+<div class="modal-overlay" id="modal-detalhes">
+  <div class="modal" style="max-width:720px;">
+    <h3 style="margin-bottom:4px;">Ficha do cliente</h3>
+    <p style="color:var(--gray-500);font-size:13px;margin-top:0;">
+      Dados completos e edição da licença — sem precisar abrir o banco.
+    </p>
+    <div id="detalhes-corpo" style="max-height:65vh;overflow-y:auto;">
+      <div class="empty"><p>Carregando…</p></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="fecharModal('modal-detalhes')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════════════════
 //  Estado global
@@ -902,6 +918,7 @@ function renderLicencas(data) {
         <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_ativacao)}</td>
         <td>
           <div style="display:flex;gap:4px;justify-content:flex-end;">
+            <button class="btn-secondary btn-sm" onclick="abrirDetalhes('${escapeHtml(l.chave)}')" title="Ver ficha completa e editar">⋯ Detalhes</button>
             ${l.status === 'ativa' || l.status === 'inativa' ? `
               <button class="btn-secondary btn-sm" onclick="resetMachine('${escapeHtml(l.chave)}')" title="Liberar pra ativar em outro PC">↺ Reset PC</button>
               <button class="btn-danger btn-sm" onclick="revogar('${escapeHtml(l.chave)}')" title="Bloquear chave">⊘ Revogar</button>
@@ -974,6 +991,158 @@ async function resetMachine(chave) {
   } catch (err) {
     toast('Erro: ' + err.message, 'error')
   }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Ficha completa do cliente + edição (substitui mexer no Atlas)
+// ════════════════════════════════════════════════════════════════════
+let _detalhesChave = null
+
+async function abrirDetalhes(chave) {
+  _detalhesChave = chave
+  document.getElementById('detalhes-corpo').innerHTML =
+    '<div class="empty"><p>Carregando…</p></div>'
+  document.getElementById('modal-detalhes').classList.add('active')
+  try {
+    const data = await api('/api/admin/license?chave=' + encodeURIComponent(chave))
+    renderDetalhes(data)
+  } catch (err) {
+    document.getElementById('detalhes-corpo').innerHTML =
+      '<div class="empty"><p>Erro ao carregar: ' + escapeHtml(err.message) + '</p></div>'
+  }
+}
+
+function linhaInfo(rotulo, valor, mono) {
+  const v = (valor === null || valor === undefined || valor === '')
+    ? '<span style="color:var(--gray-500);">—</span>'
+    : (mono ? '<code style="font-size:12px;">' + escapeHtml(String(valor)) + '</code>'
+            : escapeHtml(String(valor)))
+  return '<div style="display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid var(--gray-100);">'
+       + '<span style="color:var(--gray-500);font-size:13px;">' + rotulo + '</span>'
+       + '<span style="font-size:13px;text-align:right;">' + v + '</span></div>'
+}
+
+function renderDetalhes(data) {
+  const l = data.license || {}
+  const nomeCompleto = [l.nome, l.sobrenome].filter(Boolean).join(' ')
+  const tel = l.telefone ? fmtTelefone(l.telefone) : ''
+  const expISO = l.expira_em ? new Date(l.expira_em).toISOString().slice(0, 10) : ''
+
+  const ativacoes = (data.ativacoes || []).map(a =>
+    '<div style="font-size:12px;color:var(--gray-500);padding:4px 0;">'
+    + fmtData(a.data) + ' · <code>' + escapeHtml(String(a.machine_id || '').slice(0, 16)) + '…</code>'
+    + '</div>').join('') || '<div style="font-size:12px;color:var(--gray-500);">Nenhuma ativação registrada.</div>'
+
+  const eventos = (data.eventos || []).slice(0, 8).map(e =>
+    '<div style="font-size:12px;color:var(--gray-500);padding:4px 0;">'
+    + fmtData(e.data) + ' · <strong>' + escapeHtml(e.tipo) + '</strong>'
+    + '</div>').join('') || '<div style="font-size:12px;color:var(--gray-500);">Sem eventos.</div>'
+
+  document.getElementById('detalhes-corpo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <p class="tag" style="font-weight:600;font-size:12px;color:var(--gray-700);margin:0 0 6px;">CLIENTE</p>
+        ${linhaInfo('Nome', nomeCompleto)}
+        ${linhaInfo('E-mail', l.email)}
+        ${linhaInfo('Telefone', tel)}
+        ${linhaInfo('Origem', l.origem)}
+        ${linhaInfo('Order ID', l.order_id, true)}
+      </div>
+      <div>
+        <p class="tag" style="font-weight:600;font-size:12px;color:var(--gray-700);margin:0 0 6px;">LICENÇA</p>
+        ${linhaInfo('Chave', l.chave, true)}
+        ${linhaInfo('Status', l.status)}
+        ${linhaInfo('Plano', l.plano)}
+        ${linhaInfo('Expira em', l.expira_em ? fmtData(l.expira_em) : 'Nunca (vitalícia)')}
+        ${linhaInfo('Dias restantes', l.dias_restantes === null || l.dias_restantes === undefined ? '—' : l.dias_restantes)}
+        ${linhaInfo('Máquina', l.machine_id ? String(l.machine_id).slice(0, 20) + '…' : null, true)}
+        ${linhaInfo('Compra', fmtData(l.data_compra))}
+        ${linhaInfo('Ativação', fmtData(l.data_ativacao))}
+        ${linhaInfo('Último acesso', fmtData(l.ultimo_acesso))}
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--gray-200);">
+      <p class="tag" style="font-weight:600;font-size:12px;color:var(--gray-700);margin:0 0 10px;">EDITAR LICENÇA</p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <button class="btn-secondary btn-sm" onclick="acaoRapida({somar_dias:15})">+15 dias</button>
+        <button class="btn-secondary btn-sm" onclick="acaoRapida({somar_dias:365})">+1 ano</button>
+        <button class="btn-secondary btn-sm" onclick="acaoRapida({plano:'anual',somar_dias:365,status:'ativa'})">Virar anual (+1 ano)</button>
+        <button class="btn-secondary btn-sm" onclick="acaoRapida({plano:'vitalicia',status:'ativa'})">Tornar vitalícia</button>
+        <button class="btn-secondary btn-sm" onclick="acaoRapida({somar_dias:-1000})" title="Marca como vencida (para testes)">Vencer agora</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
+        <div class="field" style="margin:0;">
+          <label style="font-size:12px;">Plano</label>
+          <select id="edit-plano">
+            <option value="trial"     ${l.plano === 'trial' ? 'selected' : ''}>trial</option>
+            <option value="anual"     ${l.plano === 'anual' ? 'selected' : ''}>anual</option>
+            <option value="vitalicia" ${l.plano === 'vitalicia' ? 'selected' : ''}>vitalicia</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label style="font-size:12px;">Expira em</label>
+          <input type="date" id="edit-expira" value="${expISO}">
+        </div>
+        <div class="field" style="margin:0;">
+          <label style="font-size:12px;">Status</label>
+          <select id="edit-status">
+            <option value="inativa"  ${l.status === 'inativa' ? 'selected' : ''}>inativa</option>
+            <option value="ativa"    ${l.status === 'ativa' ? 'selected' : ''}>ativa</option>
+            <option value="suspensa" ${l.status === 'suspensa' ? 'selected' : ''}>suspensa</option>
+            <option value="revogada" ${l.status === 'revogada' ? 'selected' : ''}>revogada</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--gray-500);margin:8px 0 0;">
+        Plano <strong>vitalicia</strong> zera a validade (nunca expira). Deixe a data vazia para o mesmo efeito.
+      </p>
+      <button class="btn-primary btn-sm" style="margin-top:12px;" onclick="salvarEdicao()">Salvar alterações</button>
+    </div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--gray-200);display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <p class="tag" style="font-weight:600;font-size:12px;color:var(--gray-700);margin:0 0 6px;">ATIVAÇÕES</p>
+        ${ativacoes}
+      </div>
+      <div>
+        <p class="tag" style="font-weight:600;font-size:12px;color:var(--gray-700);margin:0 0 6px;">HISTÓRICO</p>
+        ${eventos}
+      </div>
+    </div>`
+}
+
+function fmtTelefone(t) {
+  const d = String(t || '').replace(/\D/g, '')
+  if (d.length === 11) return '(' + d.slice(0,2) + ') ' + d.slice(2,7) + '-' + d.slice(7)
+  if (d.length === 10) return '(' + d.slice(0,2) + ') ' + d.slice(2,6) + '-' + d.slice(6)
+  return t
+}
+
+async function acaoRapida(campos) {
+  if (!_detalhesChave) return
+  try {
+    await api('/api/admin/license', {
+      method: 'PATCH',
+      body: JSON.stringify(Object.assign({ chave: _detalhesChave }, campos)),
+    })
+    toast('Licença atualizada', 'success')
+    abrirDetalhes(_detalhesChave)
+    carregarLicencas(paginaAtual)
+    carregarStats()
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error')
+  }
+}
+
+async function salvarEdicao() {
+  if (!_detalhesChave) return
+  const plano  = document.getElementById('edit-plano').value
+  const data   = document.getElementById('edit-expira').value
+  const status = document.getElementById('edit-status').value
+  await acaoRapida({ plano, expira_em: data || null, status })
 }
 
 async function apagarChave(chave) {

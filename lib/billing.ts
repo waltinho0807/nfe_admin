@@ -29,10 +29,28 @@ export function calcularNovaExpiracao(
   atual: Date | null | undefined,
   agora: Date = new Date(),
 ): Date {
-  const base = atual && atual.getTime() > agora.getTime() ? atual : agora
-  const nova = new Date(base)
-  nova.setDate(nova.getDate() + DIAS_ANO)
-  return nova
+  return somarDiasExpiracao(atual, DIAS_ANO, agora)
+}
+
+/**
+ * Soma dias à validade SEM ENCURTAR quem renovou adiantado.
+ *
+ * Base = a validade atual (se ainda estiver no futuro) OU hoje.
+ * É a mesma regra do pagamento — quem paga 100 dias antes de vencer
+ * ganha 365 EM CIMA do que já tinha, não perde o saldo.
+ *
+ * Usada pelo webhook do Mercado Pago e pelos ajustes do painel admin.
+ */
+export function somarDiasExpiracao(
+  atual: Date | null | undefined,
+  dias: number,
+  agora: Date = new Date(),
+): Date {
+  const base = atual && new Date(atual).getTime() > agora.getTime()
+    ? new Date(atual)
+    : new Date(agora)
+  base.setDate(base.getDate() + dias)
+  return base
 }
 
 export function calcularExpiracaoTrial(agora: Date = new Date()): Date {
