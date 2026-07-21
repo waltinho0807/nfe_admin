@@ -1,5 +1,5 @@
 // app/api/trial/route.ts
-// POST { nome, email, turnstile_token }
+// POST { nome, sobrenome, email, telefone, turnstile_token? }
 // Cria a licença TRIAL (15 dias a partir de AGORA — a "data de download")
 // e envia a chave por e-mail. A chave NUNCA volta na resposta HTTP:
 // o e-mail é a validação do e-mail.
@@ -9,32 +9,85 @@ import { gerarChaveUnica } from '@/lib/license'
 import { validarTurnstile } from '@/lib/turnstile'
 import { calcularExpiracaoTrial, DIAS_TRIAL } from '@/lib/billing'
 import { enviarEmailTrial } from '@/lib/email'
+import { normalizarEmail, ehEmailDescartavel,
+         LIMITE_TRIALS_POR_IP_DIA,
+         LIMITE_SEM_TURNSTILE_POR_IP_DIA } from '@/lib/antiabuso'
 
 export async function POST(req: NextRequest) {
   try {
-    const body  = await req.json().catch(() => ({}))
-    const nome  = String(body?.nome  || '').trim().slice(0, 120)
-    const email = String(body?.email || '').trim().toLowerCase()
-    const token = String(body?.turnstile_token || '')
-    const ip    = req.headers.get('x-forwarded-for') || 'unknown'
+    const body      = await req.json().catch(() => ({}))
+    const nome      = String(body?.nome      || '').trim().slice(0, 80)
+    const sobrenome = String(body?.sobrenome || '').trim().slice(0, 80)
+    const telefone  = String(body?.telefone  || '').replace(/\D/g, '').slice(0, 13)
+    const email     = String(body?.email     || '').trim().toLowerCase()
+    const token     = String(body?.turnstile_token || '')
+    const ip        = req.headers.get('x-forwarded-for') || 'unknown'
 
-    if (!nome || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // ── Validação com mensagem POR CAMPO (genérico faz desistir) ──
+    if (!nome || !sobrenome) {
       return NextResponse.json(
         { ok: false, code: 'invalid_params',
-          message: 'Informe seu nome e um e-mail válido.' }, { status: 400 })
+          message: 'Informe seu nome e sobrenome.' }, { status: 400 })
     }
-    const turnstile = await validarTurnstile(token, ip)
-    if (!turnstile.success) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json(
-        { ok: false, code: 'turnstile',
-          message: 'Verificação anti-robô falhou. Recarregue e tente de novo.' },
+        { ok: false, code: 'invalid_params',
+          message: 'Informe um e-mail válido.' }, { status: 400 })
+    }
+    if (telefone.length < 10 || telefone.length > 11) {
+      return NextResponse.json(
+        { ok: false, code: 'invalid_params',
+          message: 'Informe um telefone com DDD (ex: 11 91234-5678).' },
+        { status: 400 })
+    }
+
+    // ── Turnstile FAIL-OPEN ──────────────────────────────────────
+    // NÃO barra o usuário: se o desafio não validou (widget bloqueado
+    // por adblock, rede corporativa, Cloudflare fora, ou o formulário
+    // simplesmente não usa mais o widget), o trial é criado do mesmo
+    // jeito — só com o teto de IP mais apertado. Isso é tráfego pago:
+    // lead travado no formulário = dinheiro queimado.
+    // O bot esbarra nas outras camadas (e-mail normalizado, temp-mail,
+    // e a muralha de 1 trial por MÁQUINA lá na ativação).
+    let turnstileStatus: 'ok' | 'ausente' | 'falhou' = 'ausente'
+    if (token) {
+      const t = await validarTurnstile(token, ip)
+      turnstileStatus = t.success ? 'ok' : 'falhou'
+    }
+    const limiteIp = turnstileStatus === 'ok'
+      ? LIMITE_TRIALS_POR_IP_DIA
+      : LIMITE_SEM_TURNSTILE_POR_IP_DIA
+
+    // Temp-mail: a chave chega POR e-mail — descartável = abuso na certa
+    if (ehEmailDescartavel(email)) {
+      return NextResponse.json(
+        { ok: false, code: 'email_descartavel',
+          message: 'Use um e-mail de verdade — é nele que sua chave de '
+            + 'ativação chega (e os avisos da sua licença também).' },
         { status: 400 })
     }
 
     await connectDB()
 
-    // 1 trial por e-mail; quem já tem licença recebe orientação, não outra chave
-    const existente = await License.findOne({ email })
+    // Rate-limit por IP: mais que N trials/24h no mesmo IP = farm
+    const desde = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const trialsDoIp = await Event.countDocuments({
+      tipo: 'trial', 'dados.ip': ip, data: { $gte: desde },
+    })
+    if (trialsDoIp >= limiteIp) {
+      return NextResponse.json(
+        { ok: false, code: 'rate_limit',
+          message: 'Muitos testes criados a partir desta conexão hoje. '
+            + 'Tente novamente amanhã ou fale com o suporte.' },
+        { status: 429 })
+    }
+
+    // 1 trial por e-mail — com NORMALIZAÇÃO anti-alias:
+    // walter+2@gmail.com e w.alter@gmail.com contam como o mesmo e-mail
+    const emailNorm = normalizarEmail(email)
+    const existente = await License.findOne({
+      $or: [{ email }, { email: emailNorm }, { email_norm: emailNorm }],
+    })
     if (existente) {
       const plano = existente.plano || 'vitalicia'
       const message = plano === 'trial'
@@ -50,7 +103,8 @@ export async function POST(req: NextRequest) {
     const chave = await gerarChaveUnica()
     const expira = calcularExpiracaoTrial()
     await License.create({
-      chave, email, nome,
+      chave, email, nome, sobrenome, telefone,
+      email_norm: emailNorm,
       order_id: `TRIAL-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
       status: 'inativa',            // ativa quando o app vincular a máquina
       plano: 'trial',
@@ -58,11 +112,13 @@ export async function POST(req: NextRequest) {
       origem: 'site',
     })
     await Event.create({
-      tipo: 'trial', chave, dados: { email, nome, ip, dias: DIAS_TRIAL },
+      tipo: 'trial', chave,
+      dados: { email, nome, sobrenome, telefone, ip, dias: DIAS_TRIAL,
+               turnstile: turnstileStatus },
     }).catch(() => {})
 
     try {
-      await enviarEmailTrial(email, nome, chave, expira)
+      await enviarEmailTrial(email, `${nome} ${sobrenome}`.trim(), chave, expira)
     } catch (e) {
       console.error('Falha ao enviar email do trial:', e)
       return NextResponse.json(
