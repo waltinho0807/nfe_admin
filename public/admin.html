@@ -499,6 +499,9 @@
         💬 Suporte
         <span class="tab-badge" id="badge-novos" style="display:none;">0</span>
       </button>
+      <button class="tab-btn" id="tabbtn-web" onclick="trocarAba('web')">
+        ☁️ NF-e Web
+      </button>
     </div>
 
     <!-- ════════════ ABA LICENÇAS ════════════ -->
@@ -618,6 +621,53 @@
         </div>
       </div>
     </div><!-- /tab-suporte -->
+
+    <!-- ════════════ ABA NF-e WEB ════════════ -->
+    <div class="tab-content" id="tab-web">
+      <div class="stats-grid" id="web-stats">
+        <div class="stat-card"><div class="label">Contas</div><div class="value" id="web-total">—</div></div>
+        <div class="stat-card"><div class="label">Assinantes</div><div class="value" id="web-assinantes">—</div></div>
+        <div class="stat-card"><div class="label">Receita/mês</div><div class="value" id="web-receita">—</div></div>
+        <div class="stat-card"><div class="label">Em teste</div><div class="value" id="web-trial">—</div></div>
+        <div class="stat-card"><div class="label">Expirados</div><div class="value" id="web-expirados">—</div></div>
+        <div class="stat-card"><div class="label">Vieram de anúncio</div><div class="value" id="web-anuncio">—</div></div>
+      </div>
+
+      <div style="margin:16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="web-busca" placeholder="Buscar por nome, e-mail ou CNPJ"
+               oninput="renderContasWeb()"
+               style="flex:1;min-width:220px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+        <select id="web-filtro" onchange="renderContasWeb()"
+                style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+          <option value="">Todas as situações</option>
+          <option value="assinante">Assinante</option>
+          <option value="trial">Em teste</option>
+          <option value="cancelando">Cancelada (com prazo)</option>
+          <option value="expirado">Expirado</option>
+          <option value="vitalicio">Vitalício</option>
+          <option value="pagamento_pendente">Pagamento pendente</option>
+        </select>
+        <button onclick="carregarContasWeb()"
+                style="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;">
+          ↻ Atualizar
+        </button>
+      </div>
+
+      <div id="web-aviso" style="display:none;margin-bottom:12px;padding:12px;
+           border:1px solid #fbbf24;background:#fffbeb;border-radius:6px;font-size:13px;"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Conta</th><th>Situação</th><th>Vence</th>
+            <th>Certificado</th><th>Notas</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="web-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /tab-web -->
   </main>
 </div>
 
@@ -744,6 +794,23 @@ function statusBadge(s) {
     suspensa: 'badge-danger',
   }[s] || 'badge-default'
   return `<span class="badge ${cls}">${s}</span>`
+}
+
+function inatividade(l) {
+  // Sinal de abandono: quanto tempo desde a última vez que o app ABRIU
+  // (validação acontece na abertura e a cada 4h). NÃO mede emissão de
+  // nota — emitir é local/offline e nunca toca o servidor.
+  if (!l.ultimo_acesso) {
+    const cor = l.data_ativacao ? 'var(--danger)' : 'var(--gray-500)'
+    const txt = l.data_ativacao ? 'nunca abriu' : '—'
+    return `<span style="font-size:12px;color:${cor};">${txt}</span>`
+  }
+  const dias = Math.floor((Date.now() - new Date(l.ultimo_acesso).getTime()) / 86400000)
+  let cor = 'var(--gray-500)'
+  if (dias >= 60) cor = 'var(--danger)'
+  else if (dias >= 30) cor = 'var(--warning)'
+  const txt = dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`
+  return `<span style="font-size:12px;color:${cor};">${txt}</span>`
 }
 
 function planoBadge(l) {
@@ -914,8 +981,8 @@ function renderLicencas(data) {
         <td>${statusBadge(l.status)}</td>
         <td>${planoBadge(l)}</td>
         <td>${machine}</td>
-        <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_compra)}</td>
         <td style="font-size:12px;color:var(--gray-500);">${fmtData(l.data_ativacao)}</td>
+        <td>${inatividade(l)}</td>
         <td>
           <div style="display:flex;gap:4px;justify-content:flex-end;">
             <button class="btn-secondary btn-sm" onclick="abrirDetalhes('${escapeHtml(l.chave)}')" title="Ver ficha completa e editar">⋯ Detalhes</button>
@@ -940,8 +1007,8 @@ function renderLicencas(data) {
           <th>Status</th>
           <th>Plano</th>
           <th>Máquina</th>
-          <th>Compra</th>
           <th>Ativação</th>
+          <th>Último acesso</th>
           <th></th>
         </tr>
       </thead>
@@ -1059,6 +1126,11 @@ function renderDetalhes(data) {
         ${linhaInfo('Compra', fmtData(l.data_compra))}
         ${linhaInfo('Ativação', fmtData(l.data_ativacao))}
         ${linhaInfo('Último acesso', fmtData(l.ultimo_acesso))}
+        ${linhaInfo('Sem abrir o app há',
+            l.dias_sem_acesso === null || l.dias_sem_acesso === undefined
+              ? (l.data_ativacao ? 'nunca abriu depois de ativar' : '—')
+              : (l.dias_sem_acesso === 0 ? 'abriu hoje'
+                 : l.dias_sem_acesso + (l.dias_sem_acesso === 1 ? ' dia' : ' dias')))}
       </div>
     </div>
 
@@ -1237,16 +1309,140 @@ document.getElementById('criar-chave-valor').addEventListener('click', (e) => {
 let abaAtual = 'licencas'
 let tkPaginaAtual = 1
 
+// ════════════════════════════════════════════════════════════════════
+//  Aba NF-e Web — contas do SaaS de assinatura
+// ════════════════════════════════════════════════════════════════════
+let contasWeb = []
+
+const ROTULO = {
+  assinante: ['Assinante', '#065f46', '#d1fae5'],
+  trial: ['Em teste', '#1e40af', '#dbeafe'],
+  cancelando: ['Cancelada', '#92400e', '#fef3c7'],
+  expirado: ['Expirado', '#991b1b', '#fee2e2'],
+  vitalicio: ['Vitalício', '#5b21b6', '#ede9fe'],
+  pagamento_pendente: ['Pagamento pendente', '#92400e', '#fef3c7'],
+}
+
+const dia = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+
+function esc(s) {
+  // Nome e e-mail vem do cadastro do cliente, ou seja: de fora. Interpolar
+  // direto no HTML deixaria qualquer um injetar script no SEU painel.
+  return String(s ?? '').replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+async function carregarContasWeb() {
+  const aviso = document.getElementById('web-aviso')
+  try {
+    // api() ja devolve o JSON pronto, trata 401 e lanca em erro.
+    const data = await api('/api/admin/web/contas')
+
+    aviso.style.display = 'none'
+    const r = data.resumo
+    document.getElementById('web-total').textContent = r.total
+    document.getElementById('web-assinantes').textContent = r.assinantes
+    document.getElementById('web-receita').textContent =
+      'R$ ' + r.receitaMensal.toFixed(2).replace('.', ',')
+    document.getElementById('web-trial').textContent = r.trial
+    document.getElementById('web-expirados').textContent = r.expirados
+    document.getElementById('web-anuncio').textContent = r.deAnuncio
+
+    contasWeb = data.contas
+    renderContasWeb()
+  } catch (e) {
+    aviso.style.display = 'block'
+    aviso.textContent = e.message
+    document.getElementById('web-tbody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;padding:24px;">—</td></tr>'
+  }
+}
+
+function renderContasWeb() {
+  const busca = (document.getElementById('web-busca').value || '').toLowerCase()
+  const filtro = document.getElementById('web-filtro').value
+
+  const lista = contasWeb.filter(c =>
+    (!filtro || c.situacao === filtro) &&
+    (!busca || [c.nome, c.email, c.cnpj, c.username]
+      .some(v => String(v ?? '').toLowerCase().includes(busca))))
+
+  const tbody = document.getElementById('web-tbody')
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;">Nenhuma conta.</td></tr>'
+    return
+  }
+
+  tbody.innerHTML = lista.map(c => {
+    const [txt, fg, bg] = ROTULO[c.situacao] || [c.situacao, '#374151', '#f3f4f6']
+
+    // Certificado vencido trava a emissao inteira e e a causa mais comum
+    // de "parou de funcionar" — por isso aparece em vermelho na lista, e
+    // nao so quando alguem abre a conta.
+    let cert = '<span style="color:#991b1b;">nenhum</span>'
+    if (c.temCertificado) {
+      const dias = c.certificadoVenceEm
+        ? Math.ceil((new Date(c.certificadoVenceEm) - Date.now()) / 86400000) : null
+      cert = dias === null ? 'ok'
+        : dias <= 0 ? `<span style="color:#991b1b;font-weight:600;">vencido</span>`
+        : dias <= 30 ? `<span style="color:#92400e;">${dias}d</span>`
+        : `${dia(c.certificadoVenceEm)}`
+    }
+
+    return `<tr>
+      <td>
+        <div style="font-weight:600;">${esc(c.nome)}${c.veioDeAnuncio ? ' <span title="veio de anúncio">📣</span>' : ''}</div>
+        <div style="font-size:12px;color:#6b7280;">${esc(c.email)} · ${esc(c.cnpj) || 'sem CNPJ'}</div>
+      </td>
+      <td><span style="padding:2px 8px;border-radius:10px;font-size:12px;color:${fg};background:${bg};">${txt}</span></td>
+      <td>${dia(c.expiraEm)}</td>
+      <td>${cert}</td>
+      <td>${c.notas}${c.rejeitadas ? ` <span style="color:#991b1b;" title="rejeitadas">(${c.rejeitadas}✗)</span>` : ''}</td>
+      <td style="white-space:nowrap;">
+        ${c.situacao === 'vitalicio'
+          ? `<button onclick="acaoWeb(${c.id},'remover_vitalicio')" style="font-size:12px;padding:4px 8px;">Tirar vitalício</button>`
+          : `<button onclick="acaoWeb(${c.id},'vitalicio')" style="font-size:12px;padding:4px 8px;">Vitalício</button>`}
+        <button onclick="estenderWeb(${c.id})" style="font-size:12px;padding:4px 8px;">+dias</button>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+function estenderWeb(userId) {
+  const dias = prompt('Quantos dias somar ao prazo? (negativo reduz)', '30')
+  if (dias === null) return
+  acaoWeb(userId, 'estender', { dias: Number(dias) })
+}
+
+async function acaoWeb(userId, acao, extra = {}) {
+  const conta = contasWeb.find(c => c.id === userId)
+  const nome = conta ? conta.nome : '#' + userId
+  if (!confirm(`Confirma "${acao}" na conta de ${nome}?`)) return
+
+  try {
+    await api('/api/admin/web/acao', {
+      method: 'POST',
+      body: JSON.stringify({ userId, acao, ...extra }),
+    })
+    toast('Aplicado.', 'success')
+    await carregarContasWeb()
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
+
 function trocarAba(aba) {
   abaAtual = aba
-  // botões
-  document.getElementById('tabbtn-licencas').classList.toggle('active', aba === 'licencas')
-  document.getElementById('tabbtn-suporte').classList.toggle('active', aba === 'suporte')
-  // conteúdo
-  document.getElementById('tab-licencas').classList.toggle('active', aba === 'licencas')
-  document.getElementById('tab-suporte').classList.toggle('active', aba === 'suporte')
-  // carrega dados da aba ao abrir
+  // Percorre o que existe em vez de listar aba por aba: antes, cada aba
+  // nova exigia editar esta funcao em dois lugares, e esquecer um deles
+  // deixava a aba anterior desenhada por baixo.
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.id === 'tabbtn-' + aba))
+  document.querySelectorAll('.tab-content').forEach(c =>
+    c.classList.toggle('active', c.id === 'tab-' + aba))
+
   if (aba === 'suporte') carregarTickets()
+  if (aba === 'web') carregarContasWeb()
 }
 
 // ════════════════════════════════════════════════════════════════════

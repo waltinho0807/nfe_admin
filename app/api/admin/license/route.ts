@@ -49,8 +49,20 @@ export async function GET(req: NextRequest) {
     dias_restantes = Math.max(0, Math.ceil(ms / 86400000))
   }
 
+  // ⚠️ .lean() devolve o documento CRU — sem os defaults do schema.
+  // Licenças criadas ANTES do campo 'plano' existir não têm a chave, e
+  // undefined faria o painel exibir a primeira opção do select ("trial"),
+  // mostrando uma vitalícia como se fosse teste. Aplica o default aqui.
+  const plano = (license as any).plano || 'vitalicia'
+
+  // Dias desde o último acesso — sinal de inatividade/abandono
+  const ua = (license as any).ultimo_acesso
+  const dias_sem_acesso = ua
+    ? Math.floor((Date.now() - new Date(ua).getTime()) / 86400000)
+    : null
+
   return NextResponse.json({
-    license: { ...license, dias_restantes },
+    license: { ...license, plano, dias_restantes, dias_sem_acesso },
     ativacoes,
     eventos,
   })
