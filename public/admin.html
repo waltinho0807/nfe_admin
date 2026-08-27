@@ -653,18 +653,27 @@
         </button>
       </div>
 
+      <div id="web-saques" style="display:none;margin-bottom:16px;padding:16px;
+           border:1px solid #d1d5db;border-radius:10px;background:#fff;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
+          <h3 style="margin:0;font-size:15px;">Saques a pagar</h3>
+          <span id="saques-total" style="font-size:13px;color:#6b7280;"></span>
+        </div>
+        <div id="saques-lista" style="margin-top:10px;"></div>
+      </div>
+
       <div id="web-aviso" style="display:none;margin-bottom:12px;padding:12px;
            border:1px solid #fbbf24;background:#fffbeb;border-radius:6px;font-size:13px;"></div>
 
       <table>
         <thead>
           <tr>
-            <th>Conta</th><th>Situação</th><th>Vence</th>
+            <th>Conta</th><th>Situação</th><th>Tipo</th><th>Vence</th>
             <th>Certificado</th><th>Notas</th><th>Ações</th>
           </tr>
         </thead>
         <tbody id="web-tbody">
-          <tr><td colspan="6" style="text-align:center;padding:24px;">Carregando…</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:24px;">Carregando…</td></tr>
         </tbody>
       </table>
     </div><!-- /tab-web -->
@@ -1350,6 +1359,7 @@ async function carregarContasWeb() {
 
     contasWeb = data.contas
     renderContasWeb()
+    carregarSaques()
   } catch (e) {
     aviso.style.display = 'block'
     aviso.textContent = e.message
@@ -1395,6 +1405,9 @@ function renderContasWeb() {
         <div style="font-size:12px;color:#6b7280;">${esc(c.email)} · ${esc(c.cnpj) || 'sem CNPJ'}</div>
       </td>
       <td><span style="padding:2px 8px;border-radius:10px;font-size:12px;color:${fg};background:${bg};">${txt}</span></td>
+      <td>${c.tipo === 'user' ? '<span style="color:#9ca3af;">—</span>'
+            : `<span style="padding:2px 8px;border-radius:10px;font-size:12px;color:#3730a3;background:#e0e7ff;">${esc(c.tipo)}</span>`
+              + (c.codigoAfiliado ? `<div style="font-size:11px;color:#6b7280;margin-top:2px;">${esc(c.codigoAfiliado)}</div>` : '')}</td>
       <td>${dia(c.expiraEm)}</td>
       <td>${cert}</td>
       <td>${c.notas}${c.rejeitadas ? ` <span style="color:#991b1b;" title="rejeitadas">(${c.rejeitadas}✗)</span>` : ''}</td>
@@ -1403,6 +1416,9 @@ function renderContasWeb() {
           ? `<button onclick="acaoWeb(${c.id},'remover_vitalicio')" style="font-size:12px;padding:4px 8px;">Tirar vitalício</button>`
           : `<button onclick="acaoWeb(${c.id},'vitalicio')" style="font-size:12px;padding:4px 8px;">Vitalício</button>`}
         <button onclick="estenderWeb(${c.id})" style="font-size:12px;padding:4px 8px;">+dias</button>
+        ${c.tipo === 'user'
+          ? `<button onclick="parceriaWeb(${c.id},'influenciador')" style="font-size:12px;padding:4px 8px;">Influenciador</button>`
+          : `<button onclick="parceriaWeb(${c.id},'user')" style="font-size:12px;padding:4px 8px;">Tirar parceria</button>`}
       </td>
     </tr>`
   }).join('')
@@ -1426,6 +1442,95 @@ async function acaoWeb(userId, acao, extra = {}) {
     })
     toast('Aplicado.', 'success')
     await carregarContasWeb()
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
+
+async function parceriaWeb(userId, tipo) {
+  const c = contasWeb.find(x => x.id === userId)
+  const nome = c ? c.nome : '#' + userId
+  const acao = tipo === 'user' ? 'REMOVER a parceria de' : 'tornar influenciador'
+  if (!confirm(`Confirma ${acao} ${nome}?`)) return
+
+  // Deixa escolher o código na hora: ele vai ser ditado em vídeo, e o
+  // parceiro costuma ter preferência. Vazio = o servidor sugere pelo nome.
+  let codigo
+  if (tipo !== 'user') {
+    codigo = prompt(
+      'Código de indicação (4 a 16 letras/números).\nDeixe vazio para gerar pelo nome:', '')
+    if (codigo === null) return
+  }
+
+  try {
+    const r = await api('/api/admin/web/parceria', {
+      method: 'POST',
+      body: JSON.stringify({ userId, tipo, codigo: codigo || undefined }),
+    })
+    toast(tipo === 'user' ? 'Parceria removida.'
+      : `Parceiro criado. Link: /r/${r.codigo}`, 'success')
+    await carregarContasWeb()
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
+
+async function carregarSaques() {
+  const caixa = document.getElementById('web-saques')
+  try {
+    const d = await api('/api/admin/web/saques')
+    const pend = d.saques.filter(s => s.situacao === 'solicitado')
+
+    // Só aparece quando há o que pagar. Bloco vazio permanente vira ruído
+    // e some da atenção justamente quando passa a importar.
+    if (!pend.length) { caixa.style.display = 'none'; return }
+
+    caixa.style.display = 'block'
+    document.getElementById('saques-total').textContent =
+      `${pend.length} pedido(s) · R$ ${d.totalPendente.toFixed(2).replace('.', ',')}`
+
+    document.getElementById('saques-lista').innerHTML = pend.map(s => `
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+                  padding:10px 0;border-top:1px solid #e5e7eb;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-weight:600;">${esc(s.parceiro)}
+            <span style="font-weight:400;color:#6b7280;font-size:12px;">${esc(s.codigo || '')}</span>
+          </div>
+          <div style="font-size:12px;color:#6b7280;">
+            ${esc(s.pixTipo || 'pix')}: <span style="font-family:monospace;">${esc(s.pixChave || '—')}</span>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;">
+            pedido em ${s.pedidoEm ? new Date(s.pedidoEm).toLocaleString('pt-BR') : '—'}
+            · ${s.quantasIndicacoes} indicação(ões)
+          </div>
+        </div>
+        <div style="font-size:18px;font-weight:600;">R$ ${Number(s.valor).toFixed(2).replace('.', ',')}</div>
+        <button onclick="copiarPix('${esc(s.pixChave || '')}')"
+                style="padding:6px 10px;font-size:12px;">Copiar chave</button>
+        <button onclick="pagarSaque('${s.id}')"
+                style="padding:6px 12px;font-size:12px;background:#065f46;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+          Marcar como pago
+        </button>
+      </div>`).join('')
+  } catch {
+    caixa.style.display = 'none'
+  }
+}
+
+function copiarPix(chave) {
+  navigator.clipboard.writeText(chave)
+    .then(() => toast('Chave copiada.', 'success'))
+    .catch(() => toast('Não foi possível copiar.', 'error'))
+}
+
+async function pagarSaque(id) {
+  if (!confirm('Confirma que o Pix já foi enviado?')) return
+  try {
+    await api('/api/admin/web/saques', {
+      method: 'POST', body: JSON.stringify({ id }),
+    })
+    toast('Saque baixado.', 'success')
+    await carregarSaques()
   } catch (e) {
     toast(e.message, 'error')
   }

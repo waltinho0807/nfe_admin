@@ -94,6 +94,8 @@ export async function GET(req: NextRequest) {
         rejeitadas: n?.rejeitadas ?? 0,
         ultimaNota: n?.ultima ?? null,
         veioDeAnuncio: !!u.gclid,
+        tipo: u.tipo ?? 'user',
+        codigoAfiliado: u.afiliado?.codigo ?? null,
         criadaEm: u.createdAt ?? null,
       }
     })
@@ -111,6 +113,7 @@ export async function GET(req: NextRequest) {
         vitalicios: conta('vitalicio'),
         semCertificado: contas.filter((c: any) => !c.temCertificado).length,
         deAnuncio: contas.filter((c: any) => c.veioDeAnuncio).length,
+        parceiros: contas.filter((c: any) => c.tipo !== 'user').length,
         // 9,90 e o preco unico de hoje. Se surgir outro plano, esta conta
         // para de valer e precisa sair do valor do assinante.
         receitaMensal: Number((pagantes * 9.9).toFixed(2)),

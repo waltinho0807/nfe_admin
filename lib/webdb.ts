@@ -43,6 +43,13 @@ const userSchema = new mongoose.Schema({
   asaasSubscriptionId:   String,
   gclid:                 String,
   gclidEm:               Date,
+  tipo:                  String,
+  afiliado: {
+    codigo:   String,
+    pixTipo:  String,
+    pixChave: String,
+    desde:    Date,
+  },
   createdAt:             Date,
   updatedAt:             Date,
 }, { collection: 'users', strict: false, versionKey: false })
@@ -70,6 +77,38 @@ const emitterSchema = new mongoose.Schema({
   uf:          String,
   ambiente:    String,
 }, { collection: 'emitters', strict: false, versionKey: false })
+
+/**
+ * Saques pedidos pelos parceiros.
+ *
+ * O nfe-web grava o pedido; o painel só lê e dá baixa. A chave Pix vem
+ * copiada de lá, do momento do pedido — se o parceiro trocar depois, o
+ * histórico continua mostrando para onde o dinheiro foi.
+ */
+const saqueSchema = new mongoose.Schema({
+  parceiroUserId: Number,
+  valor:      Number,
+  pixTipo:    String,
+  pixChave:   String,
+  situacao:   String,
+  indicacoes: [Number],
+  comprovante: String,
+  pedidoEm:   Date,
+  pagoEm:     Date,
+}, { collection: 'saques', strict: false, versionKey: false })
+
+const indicacaoSchema = new mongoose.Schema({
+  codigo:         String,
+  parceiroUserId: { type: Number, index: true },
+  indicadoUserId: Number,
+  cnpj:           String,
+  situacao:       String,
+  valorPrimeira:  Number,
+  valorSegunda:   Number,
+  liberaEm:       Date,
+  pagouEm:        Date,
+  criadoEm:       Date,
+}, { collection: 'indicacoes', strict: false, versionKey: false })
 
 /**
  * Trilha do que o painel alterou.
@@ -104,6 +143,8 @@ export async function web() {
     Certificate: c.models.Certificate || c.model('Certificate', certificateSchema),
     Emitter:     c.models.Emitter     || c.model('Emitter', emitterSchema),
     Auditoria:   c.models.Auditoria   || c.model('Auditoria', auditoriaSchema),
+    Saque:       c.models.Saque       || c.model('Saque', saqueSchema),
+    Indicacao:   c.models.Indicacao   || c.model('Indicacao', indicacaoSchema),
   }
   return cache!.modelos
 }
