@@ -691,31 +691,10 @@
         <div class="stat-card"><div class="label">Respostas novas</div><div class="value" id="cap-naolidas">—</div></div>
       </div>
 
-      <details style="margin:16px 0;border:1px solid #d1d5db;border-radius:10px;background:#fff;padding:14px;">
-        <summary style="cursor:pointer;font-weight:600;font-size:14px;">
-          Adicionar contatos
-        </summary>
-        <p style="font-size:13px;color:#6b7280;margin:10px 0 6px;">
-          Uma linha por contato, separado por ponto e vírgula:<br>
-          <code>nome; email; canal; audiência; assunto do vídeo</code><br>
-          Só nome e e-mail são obrigatórios. Colar a mesma lista duas vezes
-          não duplica ninguém.
-        </p>
-        <textarea id="cap-colar" rows="5" placeholder="Samuel M. Basso; contato@exemplo.com; YouTube; 55,7 mil; como emitir nota de devolução"
-          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-family:monospace;font-size:13px;"></textarea>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-          <select id="cap-tipo" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
-            <option value="influenciador">Influenciador</option>
-            <option value="contador">Contador</option>
-            <option value="parceiro">Parceiro</option>
-            <option value="outro">Outro</option>
-          </select>
-          <button onclick="importarContatos()"
-            style="padding:8px 14px;background:#111827;color:#fff;border:none;border-radius:6px;cursor:pointer;">
-            Importar
-          </button>
-        </div>
-      </details>
+      <div style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="abrirContato()">+ Novo contato</button>
+        <button class="btn-secondary" onclick="abrirEnvio()">✉ Escrever e-mail</button>
+      </div>
 
       <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input id="cap-busca" placeholder="Buscar" oninput="renderCaptacao()"
@@ -746,6 +725,105 @@
       </table>
     </div><!-- /tab-captacao -->
   </main>
+</div>
+
+
+<!-- ════════════ MODAL NOVO CONTATO ════════════ -->
+<div class="modal-overlay" id="modal-contato">
+  <div class="modal">
+    <h3 id="contato-titulo">Novo contato</h3>
+    <p style="color:var(--gray-500);font-size:13px;margin-top:0;">
+      Só nome e e-mail são obrigatórios. O assunto do vídeo é usado nos
+      modelos que citam o conteúdo dele — sem ele, o envio é recusado.
+    </p>
+
+    <form id="contato-form">
+      <input type="hidden" id="contato-id">
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="contato-nome" required placeholder="Samuel M. Basso">
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="contato-email" required placeholder="contato@exemplo.com">
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <select id="contato-tipo">
+          <option value="influenciador">Influenciador</option>
+          <option value="contador">Contador</option>
+          <option value="parceiro">Parceiro</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Canal (opcional)</label>
+        <input type="text" id="contato-canal" placeholder="YouTube, Instagram…">
+      </div>
+      <div class="field">
+        <label>Audiência (opcional)</label>
+        <input type="text" id="contato-audiencia" placeholder="55,7 mil inscritos">
+      </div>
+      <div class="field">
+        <label>Assunto do vídeo</label>
+        <input type="text" id="contato-referencia"
+          placeholder="como emitir nota de devolução">
+      </div>
+      <div class="field">
+        <label>Observações (opcional)</label>
+        <input type="text" id="contato-obs">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="fecharModal('modal-contato')">Cancelar</button>
+        <button type="submit" class="btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════ MODAL ESCREVER E-MAIL ════════════ -->
+<div class="modal-overlay" id="modal-envio">
+  <div class="modal" style="max-width:720px;">
+    <h3>Escrever e-mail</h3>
+
+    <div class="field">
+      <label>Para</label>
+      <select id="envio-contato" onchange="montarPrevia()">
+        <option value="">— escolha um contato —</option>
+      </select>
+      <p style="font-size:12px;color:var(--gray-500);margin:6px 0 0;">
+        Não está na lista? <a href="#" onclick="abrirContato();return false;">Cadastre primeiro</a>.
+      </p>
+    </div>
+
+    <div class="field">
+      <label>Modelo</label>
+      <select id="envio-modelo" onchange="montarPrevia()">
+        <option value="">— escolha um modelo —</option>
+      </select>
+      <p id="envio-desc" style="font-size:12px;color:var(--gray-500);margin:6px 0 0;"></p>
+    </div>
+
+    <div id="envio-alerta" style="display:none;margin:12px 0;padding:10px 12px;
+         border-radius:6px;font-size:13px;"></div>
+
+    <div class="field">
+      <label>Assunto</label>
+      <input type="text" id="envio-assunto">
+    </div>
+    <div class="field">
+      <label>Mensagem — dá para editar antes de enviar</label>
+      <textarea id="envio-corpo" rows="14"
+        style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:6px;
+               font-family:inherit;font-size:13px;line-height:1.6;"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="fecharModal('modal-envio')">Cancelar</button>
+      <button type="button" class="btn-primary" id="envio-botao" onclick="enviarEmail()">Enviar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ════════════ MODAL CRIAR CHAVE ════════════ -->
@@ -1683,6 +1761,7 @@ function renderCaptacao() {
         </div>`).join('')}</td>
       <td style="white-space:nowrap;">
         <button onclick="abrirEnvio('${c._id}')" style="font-size:12px;padding:4px 8px;">Escrever</button>
+        <button onclick="abrirContato('${c._id}')" style="font-size:12px;padding:4px 8px;">Editar</button>
         <select onchange="mudarSituacao('${c._id}', this.value)"
           style="font-size:12px;padding:4px;border:1px solid #d1d5db;border-radius:4px;">
           <option value="">situação…</option>
@@ -1693,87 +1772,143 @@ function renderCaptacao() {
   }).join('')
 }
 
-async function importarContatos() {
-  const texto = document.getElementById('cap-colar').value.trim()
-  const tipo = document.getElementById('cap-tipo').value
-  if (!texto) return
+async function importarContatos() { /* substituído pelo formulário */ }
 
-  const lista = texto.split('\n').map(l => {
-    const [nome, email, canal, audiencia, referencia] = l.split(';').map(x => (x||'').trim())
-    return { nome, email, canal, audiencia, referencia, tipo }
-  }).filter(c => c.nome && c.email)
+// ── Cadastro de contato ──────────────────────────────────────────────
 
-  if (!lista.length) { toast('Nenhuma linha válida.', 'error'); return }
-
-  try {
-    const r = await api('/api/admin/captacao/contatos', {
-      method: 'POST', body: JSON.stringify({ contatos: lista }),
-    })
-    document.getElementById('cap-colar').value = ''
-    let msg = `${r.criados} novo(s), ${r.atualizados} atualizado(s)`
-    if (r.recusados?.length) msg += ` · ${r.recusados.length} recusado(s)`
-    toast(msg, 'success')
-    await carregarCaptacao()
-  } catch (e) { toast(e.message, 'error') }
+function abrirContato(id) {
+  const c = id ? contatos.find(x => x._id === id) : null
+  document.getElementById('contato-titulo').textContent =
+    c ? 'Editar contato' : 'Novo contato'
+  document.getElementById('contato-id').value = c?._id || ''
+  document.getElementById('contato-nome').value = c?.nome || ''
+  document.getElementById('contato-email').value = c?.email || ''
+  document.getElementById('contato-tipo').value = c?.tipo || 'influenciador'
+  document.getElementById('contato-canal').value = c?.canal || ''
+  document.getElementById('contato-audiencia').value = c?.audiencia || ''
+  document.getElementById('contato-referencia').value = c?.referencia || ''
+  document.getElementById('contato-obs').value = c?.observacoes || ''
+  // O e-mail é a chave do contato: deixar editar criaria um segundo
+  // registro em vez de atualizar, e o histórico ficaria partido.
+  document.getElementById('contato-email').readOnly = !!c
+  document.getElementById('modal-contato').classList.add('active')
 }
 
-async function mudarSituacao(id, situacao) {
-  if (!situacao) return
+document.getElementById('contato-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault()
+  const dados = {
+    nome: document.getElementById('contato-nome').value.trim(),
+    email: document.getElementById('contato-email').value.trim(),
+    tipo: document.getElementById('contato-tipo').value,
+    canal: document.getElementById('contato-canal').value.trim(),
+    audiencia: document.getElementById('contato-audiencia').value.trim(),
+    referencia: document.getElementById('contato-referencia').value.trim(),
+    observacoes: document.getElementById('contato-obs').value.trim(),
+  }
   try {
     await api('/api/admin/captacao/contatos', {
-      method: 'PUT', body: JSON.stringify({ id, situacao }),
+      method: 'POST', body: JSON.stringify(dados),
     })
+    fecharModal('modal-contato')
+    toast('Contato salvo.', 'success')
     await carregarCaptacao()
   } catch (e) { toast(e.message, 'error') }
+})
+
+// ── Escrever e enviar ────────────────────────────────────────────────
+
+function abrirEnvio(id) {
+  const sel = document.getElementById('envio-contato')
+  sel.innerHTML = '<option value="">— escolha um contato —</option>'
+    + contatos.map(c =>
+        `<option value="${c._id}">${esc(c.nome)} · ${esc(c.email)}</option>`).join('')
+  if (id) sel.value = id
+
+  const mod = document.getElementById('envio-modelo')
+  mod.innerHTML = '<option value="">— escolha um modelo —</option>'
+    + modelosEmail.map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join('')
+
+  document.getElementById('envio-assunto').value = ''
+  document.getElementById('envio-corpo').value = ''
+  document.getElementById('envio-alerta').style.display = 'none'
+  document.getElementById('modal-envio').classList.add('active')
+  if (id) montarPrevia()
 }
 
-async function abrirEnvio(id) {
-  const c = contatos.find(x => x._id === id)
-  if (!c) return
+function aviso(texto, cor) {
+  const el = document.getElementById('envio-alerta')
+  if (!texto) { el.style.display = 'none'; return }
+  el.style.display = 'block'
+  el.textContent = texto
+  el.style.background = cor === 'erro' ? '#fee2e2' : '#fef3c7'
+  el.style.color = cor === 'erro' ? '#991b1b' : '#92400e'
+}
 
-  const opcoes = modelosEmail.map((m, i) => `${i + 1}. ${m.nome}`).join('\n')
-  const escolha = prompt(`Modelo para ${c.nome}:\n\n${opcoes}\n\nDigite o número:`, '1')
-  if (!escolha) return
-  const m = modelosEmail[Number(escolha) - 1]
-  if (!m) { toast('Modelo inválido.', 'error'); return }
+async function montarPrevia() {
+  const id = document.getElementById('envio-contato').value
+  const modelo = document.getElementById('envio-modelo').value
+  const botao = document.getElementById('envio-botao')
+
+  const m = modelosEmail.find(x => x.id === modelo)
+  document.getElementById('envio-desc').textContent = m?.descricao || ''
+
+  if (!id || !modelo) { aviso(''); botao.disabled = true; return }
 
   try {
-    const p = await api(`/api/admin/captacao/enviar?contatoId=${id}&modelo=${m.id}`)
+    const p = await api(`/api/admin/captacao/enviar?contatoId=${id}&modelo=${modelo}`)
+    document.getElementById('envio-assunto').value = p.assunto
+    document.getElementById('envio-corpo').value = p.corpo
 
-    if (p.jaEnviadoEm) {
-      if (!confirm(`Este modelo já foi enviado em `
-        + `${new Date(p.jaEnviadoEm).toLocaleDateString('pt-BR')}. `
-        + `O envio será recusado. Abrir mesmo assim para ver o texto?`)) return
-    }
-
-    // Variável faltando é o erro que não tem volta: um "Vi seu vídeo sobre
+    // Variável não preenchida é o erro sem volta: um "Vi seu vídeo sobre
     // {referencia}" enviado assim destrói o contato.
     if (p.faltando?.length) {
-      const falta = p.faltando.join(', ')
-      const valor = prompt(
-        `Falta preencher: ${falta}.\n\n`
-        + `Para "referencia", use o título ou assunto do vídeo dele.\n`
-        + `Deixe vazio para cancelar:`, '')
-      if (!valor) return
-      await api('/api/admin/captacao/contatos', {
-        method: 'PUT', body: JSON.stringify({ id, referencia: valor }),
-      })
-      await carregarCaptacao()
-      return abrirEnvio(id)
+      aviso(`Falta preencher no cadastro: ${p.faltando.join(', ')}. `
+        + `Edite o contato antes de enviar — o texto está com as chaves à mostra.`, 'erro')
+      botao.disabled = true
+      return
     }
+    if (p.jaEnviadoEm) {
+      aviso(`Este modelo já foi enviado em `
+        + `${new Date(p.jaEnviadoEm).toLocaleDateString('pt-BR')}. `
+        + `Escolha outro — repetir o mesmo texto vira spam aos olhos de quem recebe.`, 'erro')
+      botao.disabled = true
+      return
+    }
+    aviso('')
+    botao.disabled = false
+  } catch (e) {
+    aviso(e.message, 'erro')
+    botao.disabled = true
+  }
+}
 
-    const corpo = prompt(
-      `Assunto: ${p.assunto}\n\n`
-      + `Revise o texto antes de enviar (dá para editar):`, p.corpo)
-    if (!corpo) return
+async function enviarEmail() {
+  const contatoId = document.getElementById('envio-contato').value
+  const modelo = document.getElementById('envio-modelo').value
+  const assunto = document.getElementById('envio-assunto').value.trim()
+  const corpo = document.getElementById('envio-corpo').value.trim()
+  const c = contatos.find(x => x._id === contatoId)
+  if (!c) return
 
+  if (!confirm(`Enviar para ${c.nome} <${c.email}>?\n\nNão dá para desfazer.`)) return
+
+  const botao = document.getElementById('envio-botao')
+  botao.disabled = true
+  botao.textContent = 'Enviando…'
+  try {
     await api('/api/admin/captacao/enviar', {
       method: 'POST',
-      body: JSON.stringify({ contatoId: id, modelo: m.id, assunto: p.assunto, corpo }),
+      body: JSON.stringify({ contatoId, modelo, assunto, corpo }),
     })
+    fecharModal('modal-envio')
     toast(`Enviado para ${c.nome}.`, 'success')
     await carregarCaptacao()
-  } catch (e) { toast(e.message, 'error') }
+  } catch (e) {
+    aviso(e.message, 'erro')
+  } finally {
+    botao.disabled = false
+    botao.textContent = 'Enviar'
+  }
 }
 
 function trocarAba(aba) {
