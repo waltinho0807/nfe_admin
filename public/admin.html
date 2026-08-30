@@ -502,6 +502,9 @@
       <button class="tab-btn" id="tabbtn-web" onclick="trocarAba('web')">
         ☁️ NF-e Web
       </button>
+      <button class="tab-btn" id="tabbtn-captacao" onclick="trocarAba('captacao')">
+        📣 Captação
+      </button>
     </div>
 
     <!-- ════════════ ABA LICENÇAS ════════════ -->
@@ -677,6 +680,71 @@
         </tbody>
       </table>
     </div><!-- /tab-web -->
+
+    <!-- ════════════ ABA CAPTAÇÃO ════════════ -->
+    <div class="tab-content" id="tab-captacao">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Contatos</div><div class="value" id="cap-total">—</div></div>
+        <div class="stat-card"><div class="label">Ainda não contatados</div><div class="value" id="cap-novos">—</div></div>
+        <div class="stat-card"><div class="label">Responderam</div><div class="value" id="cap-resp">—</div></div>
+        <div class="stat-card"><div class="label">Fechados</div><div class="value" id="cap-fech">—</div></div>
+        <div class="stat-card"><div class="label">Respostas novas</div><div class="value" id="cap-naolidas">—</div></div>
+      </div>
+
+      <details style="margin:16px 0;border:1px solid #d1d5db;border-radius:10px;background:#fff;padding:14px;">
+        <summary style="cursor:pointer;font-weight:600;font-size:14px;">
+          Adicionar contatos
+        </summary>
+        <p style="font-size:13px;color:#6b7280;margin:10px 0 6px;">
+          Uma linha por contato, separado por ponto e vírgula:<br>
+          <code>nome; email; canal; audiência; assunto do vídeo</code><br>
+          Só nome e e-mail são obrigatórios. Colar a mesma lista duas vezes
+          não duplica ninguém.
+        </p>
+        <textarea id="cap-colar" rows="5" placeholder="Samuel M. Basso; contato@exemplo.com; YouTube; 55,7 mil; como emitir nota de devolução"
+          style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-family:monospace;font-size:13px;"></textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+          <select id="cap-tipo" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            <option value="influenciador">Influenciador</option>
+            <option value="contador">Contador</option>
+            <option value="parceiro">Parceiro</option>
+            <option value="outro">Outro</option>
+          </select>
+          <button onclick="importarContatos()"
+            style="padding:8px 14px;background:#111827;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+            Importar
+          </button>
+        </div>
+      </details>
+
+      <div style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="cap-busca" placeholder="Buscar" oninput="renderCaptacao()"
+          style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+        <select id="cap-filtro" onchange="renderCaptacao()"
+          style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+          <option value="">Todas as situações</option>
+          <option value="novo">Ainda não contatado</option>
+          <option value="contatado">Contatado</option>
+          <option value="respondeu">Respondeu</option>
+          <option value="negociando">Negociando</option>
+          <option value="fechado">Fechado</option>
+          <option value="recusou">Recusou</option>
+        </select>
+        <button onclick="carregarCaptacao()"
+          style="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;">
+          ↻ Atualizar
+        </button>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Contato</th><th>Tipo</th><th>Situação</th><th>Enviados</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="cap-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:24px;">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div><!-- /tab-captacao -->
   </main>
 </div>
 
@@ -1417,7 +1485,8 @@ function renderContasWeb() {
           : `<button onclick="acaoWeb(${c.id},'vitalicio')" style="font-size:12px;padding:4px 8px;">Vitalício</button>`}
         <button onclick="estenderWeb(${c.id})" style="font-size:12px;padding:4px 8px;">+dias</button>
         ${c.tipo === 'user'
-          ? `<button onclick="parceriaWeb(${c.id},'influenciador')" style="font-size:12px;padding:4px 8px;">Influenciador</button>`
+          ? `<button onclick="parceriaWeb(${c.id},'influenciador')" style="font-size:12px;padding:4px 8px;">Influenciador</button>
+             <button onclick="parceriaWeb(${c.id},'contador')" style="font-size:12px;padding:4px 8px;">Contador</button>`
           : `<button onclick="parceriaWeb(${c.id},'user')" style="font-size:12px;padding:4px 8px;">Tirar parceria</button>`}
       </td>
     </tr>`
@@ -1450,13 +1519,17 @@ async function acaoWeb(userId, acao, extra = {}) {
 async function parceriaWeb(userId, tipo) {
   const c = contasWeb.find(x => x.id === userId)
   const nome = c ? c.nome : '#' + userId
-  const acao = tipo === 'user' ? 'REMOVER a parceria de' : 'tornar influenciador'
+  const acao = tipo === 'user' ? 'REMOVER a parceria de'
+    : tipo === 'contador' ? 'dar acesso de contador a' : 'tornar influenciador'
   if (!confirm(`Confirma ${acao} ${nome}?`)) return
 
   // Deixa escolher o código na hora: ele vai ser ditado em vídeo, e o
   // parceiro costuma ter preferência. Vazio = o servidor sugere pelo nome.
+  // Só o influenciador dita o código em vídeo. O contador ganha um
+  // gerado pelo nome, porque o link dele é acessório — o que ele quer é
+  // a lista de clientes.
   let codigo
-  if (tipo !== 'user') {
+  if (tipo === 'influenciador') {
     codigo = prompt(
       'Código de indicação (4 a 16 letras/números).\nDeixe vazio para gerar pelo nome:', '')
     if (codigo === null) return
@@ -1468,6 +1541,7 @@ async function parceriaWeb(userId, tipo) {
       body: JSON.stringify({ userId, tipo, codigo: codigo || undefined }),
     })
     toast(tipo === 'user' ? 'Parceria removida.'
+      : tipo === 'contador' ? 'Acesso de contador concedido.'
       : `Parceiro criado. Link: /r/${r.codigo}`, 'success')
     await carregarContasWeb()
   } catch (e) {
@@ -1536,6 +1610,172 @@ async function pagarSaque(id) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  Aba Captação — contatos, envio e histórico
+// ════════════════════════════════════════════════════════════════════
+let contatos = []
+let modelosEmail = []
+
+const SIT = {
+  novo: ['Não contatado', '#374151', '#f3f4f6'],
+  contatado: ['Contatado', '#1e40af', '#dbeafe'],
+  respondeu: ['Respondeu', '#065f46', '#d1fae5'],
+  negociando: ['Negociando', '#92400e', '#fef3c7'],
+  fechado: ['Fechado', '#065f46', '#a7f3d0'],
+  recusou: ['Recusou', '#991b1b', '#fee2e2'],
+}
+
+async function carregarCaptacao() {
+  try {
+    const d = await api('/api/admin/captacao/contatos')
+    contatos = d.contatos
+    document.getElementById('cap-total').textContent = d.resumo.total
+    document.getElementById('cap-novos').textContent = d.resumo.novos
+    document.getElementById('cap-resp').textContent = d.resumo.responderam
+    document.getElementById('cap-fech').textContent = d.resumo.fechados
+    document.getElementById('cap-naolidas').textContent = d.resumo.respostasNaoLidas ?? 0
+    if (!modelosEmail.length) {
+      modelosEmail = (await api('/api/admin/captacao/enviar')).modelos
+    }
+    renderCaptacao()
+  } catch (e) {
+    document.getElementById('cap-tbody').innerHTML =
+      `<tr><td colspan="5" style="text-align:center;padding:24px;color:#991b1b;">${esc(e.message)}</td></tr>`
+  }
+}
+
+function renderCaptacao() {
+  const busca = (document.getElementById('cap-busca').value || '').toLowerCase()
+  const filtro = document.getElementById('cap-filtro').value
+  const lista = contatos.filter(c =>
+    (!filtro || c.situacao === filtro) &&
+    (!busca || [c.nome, c.email, c.canal].some(v =>
+      String(v ?? '').toLowerCase().includes(busca))))
+
+  const tb = document.getElementById('cap-tbody')
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;">Nenhum contato.</td></tr>'
+    return
+  }
+
+  tb.innerHTML = lista.map(c => {
+    const [txt, fg, bg] = SIT[c.situacao] || [c.situacao, '#374151', '#f3f4f6']
+    const hist = (c.historico ?? []).map(h =>
+      `<div style="font-size:11px;color:${h.ok ? '#6b7280' : '#991b1b'};">
+         ${esc(h.modelo)} · ${new Date(h.enviadoEm).toLocaleDateString('pt-BR')}
+         ${h.ok ? '' : '· FALHOU'}
+       </div>`).join('')
+    return `<tr>
+      <td>
+        <div style="font-weight:600;">${esc(c.nome)}</div>
+        <div style="font-size:12px;color:#6b7280;">${esc(c.email)}</div>
+        ${c.canal || c.audiencia ? `<div style="font-size:11px;color:#9ca3af;">${esc(c.canal||'')} ${esc(c.audiencia||'')}</div>` : ''}
+        ${!c.referencia ? '<div style="font-size:11px;color:#92400e;">sem assunto do vídeo</div>' : ''}
+      </td>
+      <td style="font-size:12px;">${esc(c.tipo)}</td>
+      <td><span style="padding:2px 8px;border-radius:10px;font-size:12px;color:${fg};background:${bg};">${txt}</span></td>
+      <td>${c.enviosFeitos || 0}${hist}${(c.respostas ?? []).map(rp => `
+        <div style="margin-top:6px;padding:6px 8px;border-left:3px solid #065f46;background:#ecfdf5;border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;color:#065f46;font-weight:600;">
+            respondeu em ${new Date(rp.recebidoEm).toLocaleDateString('pt-BR')}
+          </div>
+          <div style="font-size:12px;color:#374151;white-space:pre-wrap;">${esc(String(rp.texto||'').slice(0,400))}</div>
+        </div>`).join('')}</td>
+      <td style="white-space:nowrap;">
+        <button onclick="abrirEnvio('${c._id}')" style="font-size:12px;padding:4px 8px;">Escrever</button>
+        <select onchange="mudarSituacao('${c._id}', this.value)"
+          style="font-size:12px;padding:4px;border:1px solid #d1d5db;border-radius:4px;">
+          <option value="">situação…</option>
+          ${Object.keys(SIT).map(k => `<option value="${k}">${SIT[k][0]}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+async function importarContatos() {
+  const texto = document.getElementById('cap-colar').value.trim()
+  const tipo = document.getElementById('cap-tipo').value
+  if (!texto) return
+
+  const lista = texto.split('\n').map(l => {
+    const [nome, email, canal, audiencia, referencia] = l.split(';').map(x => (x||'').trim())
+    return { nome, email, canal, audiencia, referencia, tipo }
+  }).filter(c => c.nome && c.email)
+
+  if (!lista.length) { toast('Nenhuma linha válida.', 'error'); return }
+
+  try {
+    const r = await api('/api/admin/captacao/contatos', {
+      method: 'POST', body: JSON.stringify({ contatos: lista }),
+    })
+    document.getElementById('cap-colar').value = ''
+    let msg = `${r.criados} novo(s), ${r.atualizados} atualizado(s)`
+    if (r.recusados?.length) msg += ` · ${r.recusados.length} recusado(s)`
+    toast(msg, 'success')
+    await carregarCaptacao()
+  } catch (e) { toast(e.message, 'error') }
+}
+
+async function mudarSituacao(id, situacao) {
+  if (!situacao) return
+  try {
+    await api('/api/admin/captacao/contatos', {
+      method: 'PUT', body: JSON.stringify({ id, situacao }),
+    })
+    await carregarCaptacao()
+  } catch (e) { toast(e.message, 'error') }
+}
+
+async function abrirEnvio(id) {
+  const c = contatos.find(x => x._id === id)
+  if (!c) return
+
+  const opcoes = modelosEmail.map((m, i) => `${i + 1}. ${m.nome}`).join('\n')
+  const escolha = prompt(`Modelo para ${c.nome}:\n\n${opcoes}\n\nDigite o número:`, '1')
+  if (!escolha) return
+  const m = modelosEmail[Number(escolha) - 1]
+  if (!m) { toast('Modelo inválido.', 'error'); return }
+
+  try {
+    const p = await api(`/api/admin/captacao/enviar?contatoId=${id}&modelo=${m.id}`)
+
+    if (p.jaEnviadoEm) {
+      if (!confirm(`Este modelo já foi enviado em `
+        + `${new Date(p.jaEnviadoEm).toLocaleDateString('pt-BR')}. `
+        + `O envio será recusado. Abrir mesmo assim para ver o texto?`)) return
+    }
+
+    // Variável faltando é o erro que não tem volta: um "Vi seu vídeo sobre
+    // {referencia}" enviado assim destrói o contato.
+    if (p.faltando?.length) {
+      const falta = p.faltando.join(', ')
+      const valor = prompt(
+        `Falta preencher: ${falta}.\n\n`
+        + `Para "referencia", use o título ou assunto do vídeo dele.\n`
+        + `Deixe vazio para cancelar:`, '')
+      if (!valor) return
+      await api('/api/admin/captacao/contatos', {
+        method: 'PUT', body: JSON.stringify({ id, referencia: valor }),
+      })
+      await carregarCaptacao()
+      return abrirEnvio(id)
+    }
+
+    const corpo = prompt(
+      `Assunto: ${p.assunto}\n\n`
+      + `Revise o texto antes de enviar (dá para editar):`, p.corpo)
+    if (!corpo) return
+
+    await api('/api/admin/captacao/enviar', {
+      method: 'POST',
+      body: JSON.stringify({ contatoId: id, modelo: m.id, assunto: p.assunto, corpo }),
+    })
+    toast(`Enviado para ${c.nome}.`, 'success')
+    await carregarCaptacao()
+  } catch (e) { toast(e.message, 'error') }
+}
+
 function trocarAba(aba) {
   abaAtual = aba
   // Percorre o que existe em vez de listar aba por aba: antes, cada aba
@@ -1548,6 +1788,7 @@ function trocarAba(aba) {
 
   if (aba === 'suporte') carregarTickets()
   if (aba === 'web') carregarContasWeb()
+  if (aba === 'captacao') carregarCaptacao()
 }
 
 // ════════════════════════════════════════════════════════════════════
