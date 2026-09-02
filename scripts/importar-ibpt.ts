@@ -13,9 +13,43 @@
 // IMPORTANTE: substitui a tabela inteira (apaga a antiga, insere a nova).
 // Isso garante que ao atualizar, dados antigos não fiquem misturados.
 
-import { connectDB, IbptAliquota, IbptMeta } from '../lib/mongodb'
 import * as fs from 'fs'
 import * as path from 'path'
+
+// Carrega o .env antes de qualquer import que leia process.env.
+//
+// O Next faz isso sozinho quando serve a aplicação, mas um script avulso
+// rodando por tsx não — e o erro que aparece é "MONGODB_URI nao definida",
+// que parece variável faltando quando na verdade ela está no arquivo.
+//
+// Leitura própria em vez de dotenv: uma dependência a menos, e o formato
+// é simples. Valor entre aspas é desembrulhado; comentário no fim da linha
+// só é removido quando o valor não está entre aspas, senão quebraria uma
+// senha que contenha "#".
+//
+// E o módulo do banco é importado DINAMICAMENTE lá embaixo, dentro do
+// main(). Um `import` no topo seria içado para antes desta função — testei,
+// e o erro voltava idêntico. Só a importação dinâmica roda depois.
+;(function carregarEnv() {
+  const arquivo = path.resolve(__dirname, '..', '.env')
+  if (!fs.existsSync(arquivo)) return
+  for (const linha of fs.readFileSync(arquivo, 'utf8').split(/\r?\n/)) {
+    const t = linha.trim()
+    if (!t || t.startsWith('#')) continue
+    const i = t.indexOf('=')
+    if (i < 1) continue
+    const chave = t.slice(0, i).trim()
+    if (process.env[chave] !== undefined) continue   // ambiente real vence
+    let valor = t.slice(i + 1).trim()
+    if (/^".*"$/.test(valor) || /^'.*'$/.test(valor)) {
+      valor = valor.slice(1, -1)
+    } else {
+      valor = valor.replace(/\s+#.*$/, '').trim()
+    }
+    if (valor) process.env[chave] = valor
+  }
+})()
+
 
 const UFS = new Set([
   'AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
@@ -62,6 +96,9 @@ async function main() {
     process.exit(1)
   }
   console.log(`Encontrados ${arquivos.length} arquivos CSV.`)
+
+  // Só agora, com o .env já carregado.
+  const { connectDB, IbptAliquota, IbptMeta } = await import('../lib/mongodb')
 
   console.log('Conectando ao MongoDB...')
   await connectDB()
