@@ -154,6 +154,25 @@ export function validarAntesDeEmitir(d: DadosValidacao): Achado[] {
   const a: Achado[] = [];
   const { emitente: e, nota: n, itens } = d;
 
+  // Serviço ainda não emite: o bloco ISSQN não existe.
+  //
+  // A operação está no menu e monta CFOP 5933 corretamente, mas o
+  // <imposto> sai com ICMS — e a SEFAZ recusa, porque CFOP de serviço
+  // exige ISSQN. Faltam o código da lista da LC 116, o município do fato
+  // gerador e a alíquota, que nem existem no cadastro de produto.
+  //
+  // Bloquear é melhor que deixar tentar: operação que aparece no menu e
+  // devolve rejeição é pior que operação que diz "ainda não".
+  //
+  // Fora do laço de itens de propósito — dentro, repetiria a mensagem
+  // uma vez por produto.
+  if (String((n as any).tipoOperacao ?? "").startsWith("servico")) {
+    a.push({ nivel: "erro", campo: "Tipo de operação",
+      mensagem: "Nota de serviço ainda não está disponível aqui. Serviço "
+        + "normalmente é NFS-e, emitida pela prefeitura. Se você precisa de "
+        + "NF-e com ISSQN, fale com o suporte." });
+  }
+
   // ── Emitente ────────────────────────────────────────────────────────
   if (!cnpjValido(e.cnpj ?? "")) {
     a.push({ nivel: "erro", campo: "Emitente → CNPJ", rejeicao: "226",
@@ -256,7 +275,7 @@ export function validarAntesDeEmitir(d: DadosValidacao): Achado[] {
       }
     }
 
-    // Regime × código tributário — rejeição 591.
+  // Regime × código tributário — rejeição 591.
     //
     // CSOSN só vale para CRT 1 (Simples) e CRT 4 (MEI). O CRT 2 engana,
     // porque o nome tem "Simples" dentro, mas quem passou do sublimite
